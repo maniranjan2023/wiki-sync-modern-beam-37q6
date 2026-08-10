@@ -1,0 +1,1 @@
+ALTER TABLE "user_profiles" ADD COLUMN "invited" boolean DEFAULT false NOT NULL;
