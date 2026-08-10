@@ -1,0 +1,15 @@
+[build]
+  # Apply pending drizzle migrations before building; skipped when the app has
+  # no database (DATABASE_URL unset).
+  command = "if [ -n \"$DATABASE_URL\" ]; then npm run db:migrate; fi && npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  # Git-native agent dirs ({slug}-agent/) are read from disk at request time —
+  # the tracer lists them but the packaged function must carry them at their
+  # repo-relative path for process.cwd() resolution. included_files guarantees
+  # both inclusion and placement. Harmless for apps without git agents.
+  included_files = ["*-agent/**"]

@@ -1,0 +1,106 @@
+{
+  "oneOf": [
+    {
+      "properties": {
+        "claim": {
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0.6,
+          "type": "number"
+        },
+        "drift": {
+          "const": true,
+          "type": "boolean"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "author": {
+                "type": "string"
+              },
+              "event_id": {
+                "type": "string"
+              },
+              "quote": {
+                "maxLength": 200,
+                "type": "string"
+              },
+              "timestamp": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id",
+              "quote",
+              "url",
+              "timestamp",
+              "author"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "contradiction",
+            "staleness",
+            "gap",
+            "confirmation"
+          ],
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "section_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "drift",
+        "kind",
+        "confidence",
+        "claim",
+        "evidence",
+        "note"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "confidence": {
+          "maximum": 0.6,
+          "minimum": 0,
+          "type": "number"
+        },
+        "drift": {
+          "const": false,
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "confirmation",
+            null
+          ]
+        },
+        "section_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "drift",
+        "kind",
+        "confidence"
+      ],
+      "type": "object"
+    }
+  ]
+}

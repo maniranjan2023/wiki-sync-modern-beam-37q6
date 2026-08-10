@@ -1,0 +1,69 @@
+{
+  "properties": {
+    "metadata": {
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "sections": {
+      "items": {
+        "properties": {
+          "body_md": {
+            "type": "string"
+          },
+          "heading": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "suggested_owner": {
+            "type": "string"
+          },
+          "suggested_scopes": {
+            "items": {
+              "enum": [
+                "slack",
+                "drive",
+                "github",
+                "jira",
+                "linear"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "heading",
+          "body_md",
+          "position",
+          "suggested_owner",
+          "suggested_scopes"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "error"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "sections",
+    "status",
+    "metadata"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Truewiki — Self-Maintaining Knowledge Base</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#ffffff; --surface:#fafafa; --surface-2:#f4f4f5; --border:#e4e4e7;
+    --fg:#18181b; --muted:#71717a; --faint:#a1a1aa;
+    --primary:#18181b; --radius:6px;
+    --ok:#15803d; --ok-bg:#f0fdf4; --ok-br:#bbf7d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-br:#fde68a;
+    --stale:#71717a; --stale-bg:#f4f4f5; --stale-br:#e4e4e7;
+  }
+  body{font-family:Montserrat,system-ui,sans-serif;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 32px}
+
+  /* top nav */
+  nav{border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);z-index:10}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:16px}
+  .mark{width:24px;height:24px;border-radius:var(--radius);background:var(--primary);display:grid;place-items:center}
+  .mark span{display:block;width:9px;height:9px;border:2px solid #fff;border-radius:2px}
+  .nav-links{display:flex;gap:28px;font-size:13.5px;color:var(--muted);font-weight:500}
+  .nav-links a{text-decoration:none;color:inherit}
+  .nav-cta{display:flex;gap:10px;align-items:center}
+  .btn{font-family:inherit;font-size:13px;font-weight:600;border-radius:var(--radius);padding:9px 16px;cursor:pointer;border:1px solid transparent}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-ghost{background:transparent;color:var(--fg);border-color:var(--border)}
+
+  /* hero */
+  header{padding:78px 0 56px;text-align:center;border-bottom:1px solid var(--border);background:
+    radial-gradient(900px 320px at 50% -10%, #f4f4f5 0%, #ffffff 70%)}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 13px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+  h1{font-size:52px;line-height:1.08;letter-spacing:-.035em;font-weight:700;margin:22px auto 18px;max-width:16ch}
+  .sub{font-size:17px;color:var(--muted);max-width:60ch;margin:0 auto 30px}
+  .hero-cta{display:flex;gap:12px;justify-content:center}
+  .btn-lg{padding:12px 22px;font-size:14px}
+  .metrics{display:flex;gap:44px;justify-content:center;margin-top:44px}
+  .metric b{display:block;font-size:24px;letter-spacing:-.02em}
+  .metric span{font-size:12px;color:var(--faint);font-weight:500}
+
+  /* app frame */
+  section.app{padding:56px 0}
+  .frame{border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 20px 44px -28px rgba(24,24,27,.35)}
+  .frame-bar{height:38px;background:var(--surface-2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 14px}
+  .tl{width:9px;height:9px;border-radius:50%;background:#d4d4d8}
+  .frame-path{margin-left:12px;font-size:11.5px;color:var(--faint);font-weight:500}
+  .app-grid{display:grid;grid-template-columns:210px 1fr}
+
+  /* sidebar */
+  aside{background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;min-height:530px}
+  .ws{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:16px}
+  .ws-av{width:20px;height:20px;border-radius:4px;background:var(--primary);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center}
+  .ws-name{font-size:12.5px;font-weight:600}
+  .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;padding:0 8px;margin:14px 0 6px}
+  .item{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:var(--radius);font-size:13px;color:var(--muted);font-weight:500;margin-bottom:2px}
+  .item.active{background:#fff;color:var(--fg);font-weight:600;border:1px solid var(--border)}
+  .badge{background:var(--primary);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px}
+
+  /* main */
+  main{padding:22px 24px;background:#fff}
+  .crumb{font-size:12px;color:var(--faint);font-weight:500;margin-bottom:6px}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+  h2{font-size:21px;letter-spacing:-.02em;font-weight:700}
+  .head p{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .head-actions{display:flex;gap:8px}
+  .btn-sm{padding:7px 13px;font-size:12.5px}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;border:1px solid}
+  .p-ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-br)}
+  .p-warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-br)}
+  .p-stale{color:var(--stale);background:var(--stale-bg);border-color:var(--stale-br)}
+
+  .queue{display:grid;grid-template-columns:270px 1fr;gap:16px}
+  .qlist{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .qhead{padding:9px 12px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .qrow{padding:11px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+  .qrow:last-child{border-bottom:none}
+  .qrow.sel{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--primary)}
+  .qtitle{font-size:13px;font-weight:600;letter-spacing:-.01em}
+  .qmeta{font-size:11.5px;color:var(--faint);margin-top:4px;display:flex;gap:7px;align-items:center}
+  .src{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+
+  .diffwrap{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .dhead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface)}
+  .dhead .t{font-size:13px;font-weight:600}
+  .rationale{font-size:12px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);background:#fff}
+  .rationale b{color:var(--fg);font-weight:600}
+  .panes{display:grid;grid-template-columns:1fr 1fr}
+  .pane{padding:14px}
+  .pane+.pane{border-left:1px solid var(--border)}
+  .plabel{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;margin-bottom:9px}
+  .md{font-size:12.5px;line-height:1.75;color:#3f3f46}
+  .md h4{font-size:12.5px;font-weight:700;color:var(--fg);margin-bottom:5px}
+  ins{background:var(--ok-bg);color:var(--ok);text-decoration:none;border-bottom:1px solid var(--ok-br);border-radius:2px;padding:0 2px;font-weight:600}
+  del{background:#fef2f2;color:#b91c1c;border-radius:2px;padding:0 2px}
+  .snippet{border-top:1px solid var(--border);padding:12px 14px;background:var(--surface)}
+  .snippet .plabel{margin-bottom:7px}
+  .quote{font-size:12px;color:#3f3f46;border-left:2px solid var(--border);padding-left:10px;line-height:1.6}
+  .quote em{color:var(--faint);font-style:normal;font-size:11px;display:block;margin-top:5px}
+  .actions{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:#fff}
+
+  /* loop */
+  section.loop{padding:64px 0;border-top:1px solid var(--border);background:var(--surface)}
+  .loop h3{font-size:26px;letter-spacing:-.025em;text-align:center;font-weight:700}
+  .loop p.lead{text-align:center;color:var(--muted);font-size:14.5px;margin:10px auto 34px;max-width:58ch}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px}
+  .num{width:22px;height:22px;border-radius:5px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:11px}
+  .card h5{font-size:14px;font-weight:600;letter-spacing:-.01em;margin-bottom:5px}
+  .card p{font-size:12.5px;color:var(--muted);line-height:1.6}
+
+  footer{padding:26px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--faint)}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap nav-in">
+  <div class="brand"><div class="mark"><span></span></div> Truewiki</div>
+  <div class="nav-links"><a href="#">Product</a><a href="#">Connectors</a><a href="#">Security</a><a href="#">Docs</a></div>
+  <div class="nav-cta"><button class="btn btn-ghost">Log in</button><button class="btn btn-primary">Start free</button></div>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="eyebrow"><span class="dot"></span> 412 pages verified in the last 24 hours</div>
+  <h1>Your wiki, verified against what actually happened.</h1>
+  <p class="sub">Truewiki watches Slack, Drive, GitHub, Jira and Linear, detects when a documented fact drifts from a real decision, and drafts the fix. Nothing ships without an owner's approval — a ten-minute review queue, not another doc backlog.</p>
+  <div class="hero-cta">
+    <button class="btn btn-primary btn-lg">Connect your first source</button>
+    <button class="btn btn-ghost btn-lg">See a live drift scan</button>
+  </div>
+  <div class="metrics">
+    <div class="metric"><b>11 min</b><span>Median review time</span></div>
+    <div class="metric"><b>5</b><span>Source connectors</span></div>
+    <div class="metric"><b>0</b><span>Auto-applied edits</span></div>
+  </div>
+</div></header>
+
+<section class="app"><div class="wrap">
+  <div class="frame">
+    <div class="frame-bar"><i class="tl"></i><i class="tl"></i><i class="tl"></i><span class="frame-path">truewiki.app / review-queue</span></div>
+    <div class="app-grid">
+
+      <aside>
+        <div class="ws"><div class="ws-av">N</div><div class="ws-name">Northwind</div></div>
+        <div class="nav-label">Workspace</div>
+        <div class="item">Sources</div>
+        <div class="item">Wiki</div>
+        <div class="item active">Review Queue <span class="badge">7</span></div>
+        <div class="item">Ask</div>
+        <div class="nav-label">Governance</div>
+        <div class="item">Audit Log</div>
+        <div class="item">Settings</div>
+      </aside>
+
+      <main>
+        <div class="crumb">Review Queue › Pricing &amp; Packaging</div>
+        <div class="head">
+          <div>
+            <h2>Review Queue</h2>
+            <p>7 pending proposals · last scan 12 minutes ago · never auto-applied</p>
+          </div>
+          <div class="head-actions">
+            <button class="btn btn-ghost btn-sm">Notify owners</button>
+            <button class="btn btn-primary btn-sm">Run drift scan</button>
+          </div>
+        </div>
+
+        <div class="queue">
+          <div class="qlist">
+            <div class="qhead">Pending · 7</div>
+            <div class="qrow sel">
+              <div class="qtitle">Pricing &amp; Packaging</div>
+              <div class="qmeta"><span class="pill p-warn">drift detected</span><span class="src">Slack</span></div>
+            </div>
+            <div class="qrow">
+              <div class="qtitle">Onboarding Runbook</div>
+              <div class="qmeta"><span class="pill p-warn">drift detected</span><span class="src">Drive</span></div>
+            </div>
+            <div class="qrow">
+              <div class="qtitle">Deploy &amp; Rollback</div>
+              <div class="qmeta"><span class="pill p-warn">drift detected</span><span class="src">GitHub</span></div>
+            </div>
+            <div class="qrow">
+              <div class="qtitle">Support SLAs</div>
+              <div class="qmeta"><span class="pill p-stale">stale · 64d</span><span class="src">Jira</span></div>
+            </div>
+            <div class="qrow">
+              <div class="qtitle">Q3 Roadmap Themes</div>
+              <div class="qmeta"><span class="pill p-warn">drift detected</span><span class="src">Linear</span></div>
+            </div>
+            <div class="qrow">
+              <div class="qtitle">Security Review Process</div>
+              <div class="qmeta"><span class="pill p-ok">verified</span><span class="src">Drive</span></div>
+            </div>
+          </div>
+
+          <div class="diffwrap">
+            <div class="dhead">
+              <div class="t">Pricing &amp; Packaging › Enterprise tier</div>
+              <div class="qmeta"><span class="pill p-warn">contradiction · 0.91</span></div>
+            </div>
+            <div class="rationale"><b>Rationale ·</b> Enterprise list price moved from $2,000 to $2,500/mo per the pricing decision in #pricing on 14 Mar.</div>
+            <div class="panes">
+              <div class="pane">
+                <div class="plabel">Proposed change</div>
+                <div class="md">
+                  <h4>Enterprise tier</h4>
+                  Billed annually at <del>$2,000</del> <ins>$2,500</ins> per month, minimum 25 seats.
+                  Includes SSO/SAML, audit export and a named CSM.
+                  <ins>Legacy contracts signed before 1 Apr keep the previous rate until renewal.</ins>
+                </div>
+              </div>
+              <div class="pane">
+                <div class="plabel">Current wiki section</div>
+                <div class="md">
+                  <h4>Enterprise tier</h4>
+                  Billed annually at $2,000 per month, minimum 25 seats.
+                  Includes SSO/SAML, audit export and a named CSM.
+                </div>
+              </div>
+            </div>
+            <div class="snippet">
+              <div class="plabel">Source · Slack #pricing · 14 Mar</div>
+              <div class="quote">
+                “Confirmed with finance — Enterprise goes to $2.5k/mo from 1 Apr. Anyone already on paper keeps $2k until renewal.”
+                <em>@dana.k · slack.com/archives/C02PR1CING/p1710…</em>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary btn-sm">Approve &amp; publish</button>
+              <button class="btn btn-ghost btn-sm">Edit &amp; approve</button>
+              <button class="btn btn-ghost btn-sm">Reject</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+</div></section>
+
+<section class="loop"><div class="wrap">
+  <h3>The self-maintaining loop</h3>
+  <p class="lead">Six steps, one of which is a human — deliberately. Verification is the product, so approval never gets automated away.</p>
+  <div class="steps">
+    <div class="card"><div class="num">1</div><h5>Ingest</h5><p>Scoped connectors pull recent activity from Slack, Drive, GitHub, Jira and Linear on a per-page cadence.</p></div>
+    <div class="card"><div class="num">2</div><h5>Detect drift</h5><p>Cheap bulk scanners compare each factual claim in a section against decision-bearing events, section by section.</p></div>
+    <div class="card"><div class="num">3</div><h5>Propose</h5><p>A drafter writes the minimal redline, a one-line rationale and the exact source quote that justifies it.</p></div>
+    <div class="card"><div class="num">4</div><h5>Approve</h5><p>The page owner sees the diff side by side with its evidence and approves, edits or rejects. Nothing applies itself.</p></div>
+    <div class="card"><div class="num">5</div><h5>Ship &amp; re-verify</h5><p>The page updates, a version and audit row are written, and the cadence timer resets for the next sweep.</p></div>
+    <div class="card"><div class="num">6</div><h5>Serve</h5><p>Verified answers only — every response cites its page, section and last-verified date.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%">
+  <span>Truewiki — always-fresh knowledge for teams that ship.</span>
+  <span>Audit trail · Role-based access · Human in the loop</span>
+</div></footer>
+
+</body>
+</html>

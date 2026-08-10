@@ -1,0 +1,169 @@
+{
+  "app_name": "Truewiki — Self-Maintaining Knowledge Base",
+  "architecture": "Hybrid: 1 Manager + 6 Sub-Agents + 3 Independent Agents",
+  "agents": [
+    {
+      "type": "hosted",
+      "agent_id": "6a7a22c3cb71768e5832900a",
+      "name": "Drift Scan Coordinator",
+      "agent_type": "Manager",
+      "description": "Routes a scan across every connected source sub-agent, aggregates flagged sections, hands each to the drafter, returns one proposal set",
+      "provider": "Anthropic",
+      "model": "anthropic/claude-sonnet-4-6",
+      "temperature": 0.2,
+      "top_p": 1,
+      "managed_agents": [
+        "6a7a225479361ed888c5ef2a",
+        "6a7a2254fd0aefe8da8c6921",
+        "6a7a22545a2d7a3a966e1d43",
+        "6a7a2254cb71768e58329006",
+        "6a7a22546ada253b4e709d3d",
+        "6a7a22895a2d7a3a966e1d45",
+        "6a7a2289680f2f9bfa6250f8"
+      ]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a225479361ed888c5ef2a",
+      "name": "Slack Signal Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Pulls recent messages from scoped channels and summarises decision-bearing statements",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "top_p": 1,
+      "tools": ["slack"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a2254fd0aefe8da8c6921",
+      "name": "Drive Signal Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Pulls recently modified docs in scoped folders and extracts changed factual claims",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "top_p": 1,
+      "tools": ["googledrive"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a22545a2d7a3a966e1d43",
+      "name": "GitHub Signal Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Reads merged PRs, commit messages and docs changes in scoped repos",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "top_p": 1,
+      "tools": ["github"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a2254cb71768e58329006",
+      "name": "Jira Signal Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Reads issue, status and description changes in scoped projects",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "top_p": 1,
+      "tools": ["jira"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a22546ada253b4e709d3d",
+      "name": "Linear Signal Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Reads issue and cycle updates in scoped teams since cursor; extracts decision-bearing facts only",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "top_p": 1,
+      "tools": ["linear"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a22895a2d7a3a966e1d45",
+      "name": "Drift Detection Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Compares aggregated normalized facts against page_sections and emits scored findings (contradiction / staleness / gap / confirmation). Never writes prose.",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.1,
+      "top_p": 1,
+      "skill": "detect-knowledge-drift"
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a2289680f2f9bfa6250f8",
+      "name": "Proposal Drafter Agent",
+      "agent_type": "Sub-Agent",
+      "description": "Downstream of drift detection, not parallel to the source agents. Runs once per deduplicated finding and turns it into a minimal redline, one-line rationale and validated citation.",
+      "provider": "Anthropic",
+      "model": "anthropic/claude-sonnet-4-6",
+      "temperature": 0.3,
+      "top_p": 1,
+      "skill": "draft-wiki-redline"
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a228943595b3ec5c771fe",
+      "name": "Review Notifier Agent",
+      "agent_type": "Independent",
+      "description": "Composes and DMs owners a digest of their pending proposals",
+      "provider": "Groq",
+      "model": "groq/meta-llama/llama-4-scout-17b-16e-instruct",
+      "temperature": 0.3,
+      "top_p": 1,
+      "tools": ["slack"]
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a22aacb71768e58329008",
+      "name": "Verified Answer Agent",
+      "agent_type": "Independent",
+      "description": "Answers only from pages in state verified that the asker's role/source-scope permits; every citation is validated against a real page_version before the answer renders.",
+      "provider": "Anthropic",
+      "model": "anthropic/claude-sonnet-4-6",
+      "temperature": 0.2,
+      "top_p": 1,
+      "skill": "answer-from-verified-wiki",
+      "knowledge_base": {"rag_id": "6a7a229c9f728ecff562a0ea", "rag_name": "verified_wiki_kbf676", "name": "Verified Wiki KB"}
+    },
+    {
+      "type": "hosted",
+      "agent_id": "6a7a228915c60742623cc095",
+      "name": "Wiki Import & Section Mapper",
+      "agent_type": "Independent",
+      "description": "Splits pasted/uploaded Markdown into sections, suggests an owner and source scopes per section",
+      "provider": "Groq",
+      "model": "groq/openai/gpt-oss-120b",
+      "temperature": 0.3,
+      "top_p": 1
+    }
+  ],
+  "knowledge_bases": [
+    {
+      "name": "Verified Wiki KB",
+      "rag_id": "6a7a229c9f728ecff562a0ea",
+      "rag_name": "verified_wiki_kbf676",
+      "description": "Holds verified wiki page content for RAG retrieval by the Verified Answer Agent",
+      "used_by": ["Verified Answer Agent"]
+    }
+  ],
+  "database": "orchestrator-managed (not provisioned by agent_creator)",
+  "response_schemas_saved": [
+    "response_schemas/slack_signal_agent.json",
+    "response_schemas/drive_signal_agent.json",
+    "response_schemas/github_signal_agent.json",
+    "response_schemas/jira_signal_agent.json",
+    "response_schemas/linear_signal_agent.json",
+    "response_schemas/drift_detection_agent.json",
+    "response_schemas/proposal_drafter_agent.json",
+    "response_schemas/review_notifier_agent.json",
+    "response_schemas/wiki_import_section_mapper.json",
+    "response_schemas/verified_answer_agent.json",
+    "response_schemas/drift_scan_coordinator.json"
+  ]
+}

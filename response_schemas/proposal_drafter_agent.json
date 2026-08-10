@@ -1,0 +1,98 @@
+{
+  "properties": {
+    "citation": {
+      "properties": {
+        "snippet": {
+          "maxLength": 300,
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "slack",
+            "drive",
+            "github",
+            "jira",
+            "linear"
+          ],
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_kind",
+        "url",
+        "snippet",
+        "timestamp"
+      ],
+      "type": "object"
+    },
+    "current_md": {
+      "type": "string"
+    },
+    "needs_human_input": {
+      "type": "boolean"
+    },
+    "proposed_md": {
+      "type": "string"
+    },
+    "question": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rationale": {
+      "maxLength": 140,
+      "type": "string"
+    },
+    "section_id": {
+      "type": "string"
+    },
+    "supporting": {
+      "items": {
+        "properties": {
+          "snippet": {
+            "maxLength": 300,
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "slack",
+              "drive",
+              "github",
+              "jira",
+              "linear"
+            ],
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "section_id",
+    "current_md",
+    "proposed_md",
+    "rationale",
+    "citation",
+    "supporting",
+    "needs_human_input",
+    "question"
+  ],
+  "type": "object"
+}

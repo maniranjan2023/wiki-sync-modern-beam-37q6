@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786389515429,
+      "tag": "0000_absent_white_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786389542533,
+      "tag": "0001_previous_angel",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786389618888,
+      "tag": "0002_tricky_vision",
+      "breakpoints": true
+    }
+  ]
+}

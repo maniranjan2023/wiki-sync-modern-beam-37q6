@@ -1,0 +1,64 @@
+{
+  "properties": {
+    "facts": {
+      "items": {
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "timestamp",
+          "author",
+          "text",
+          "url",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "error"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "facts",
+    "status",
+    "metadata"
+  ],
+  "type": "object"
+}

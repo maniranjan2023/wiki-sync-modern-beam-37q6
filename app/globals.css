@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+:root {
+    --font-sans: "Montserrat", sans-serif;
+    --background: 0 0% 94.1%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 96.1%;
+    --card-foreground: 0 0% 20%;
+    --popover: 0 0% 96.1%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 0 0% 37.6%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 87.8%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 85.1%;
+    --muted-foreground: 0 0% 37.3343%;
+    --accent: 0 0% 75.3%;
+    --accent-foreground: 0 0% 20%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 81.6%;
+    --input: 0 0% 87.8%;
+    --ring: 0 0% 37.6%;
+    --chart-1: 0 0% 37.6%;
+    --chart-2: 180 17.9% 33.9%;
+    --chart-3: 0 0% 56.5%;
+    --chart-4: 0 0% 65.9%;
+    --chart-5: 0 0% 75.3%;
+    --radius: 0.35rem;
+    --sidebar-background: 0 0% 91.8%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 0 0% 37.6%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 75.3%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 81.6%;
+    --sidebar-ring: 0 0% 37.6%;
+}
+
+.dark {
+    --font-sans: "Montserrat", sans-serif;
+    --background: 0 0% 10.2%;
+    --foreground: 0 0% 85.1%;
+    --card: 0 0% 12.5%;
+    --card-foreground: 0 0% 85.1%;
+    --popover: 0 0% 12.5%;
+    --popover-foreground: 0 0% 85.1%;
+    --primary: 0 0% 62.7%;
+    --primary-foreground: 0 0% 10.2%;
+    --secondary: 0 0% 18.8%;
+    --secondary-foreground: 0 0% 85.1%;
+    --muted: 0 0% 16.5%;
+    --muted-foreground: 0 0% 56.6667%;
+    --accent: 0 0% 25.1%;
+    --accent-foreground: 0 0% 85.1%;
+    --destructive: 0 66.3% 63.9%;
+    --destructive-foreground: 0 0% 14.8974%;
+    --border: 0 0% 20.8%;
+    --input: 0 0% 18.8%;
+    --ring: 0 0% 62.7%;
+    --chart-1: 0 0% 62.7%;
+    --chart-2: 187.1 15.2% 56.1%;
+    --chart-3: 0 0% 43.9%;
+    --chart-4: 0 0% 34.5%;
+    --chart-5: 0 0% 25.1%;
+    --radius: 0.35rem;
+    --sidebar-background: 0 0% 12.2%;
+    --sidebar-foreground: 0 0% 85.1%;
+    --sidebar-primary: 0 0% 62.7%;
+    --sidebar-primary-foreground: 0 0% 10.2%;
+    --sidebar-accent: 0 0% 25.1%;
+    --sidebar-accent-foreground: 0 0% 85.1%;
+    --sidebar-border: 0 0% 20.8%;
+    --sidebar-ring: 0 0% 62.7%;
+}
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* Added by the design-system writer: this theme ships a .dark block,
+   so the app supports both schemes. Native controls and the pre-paint
+   scheme resolver in app/layout.tsx both read this. */
+:root {
+    color-scheme: light dark;
+}

@@ -1,0 +1,1218 @@
+{
+  "agents": [
+    {
+      "additional_model_params": {},
+      "agent_goal": "Extract ONLY decision-bearing facts from issue and cycle updates in scoped Linear teams since cursor. Never render a drift verdict and never produce prose — facts only, for the Drift Scan Coordinator to pass downstream to the Drift Detection Agent.",
+      "agent_id": "6a7a22546ada253b4e709d3d",
+      "agent_instructions": "You are invoked automatically by the Drift Scan Coordinator (never directly by a user) as Stage 2 of a drift scan fan-out.\n\nBEHAVIOR:\n1. Use LINEAR_LIST_LINEAR_ISSUES to find issues updated since the given cursor in scoped teams (as instructed by the coordinator's scope parameters).\n2. Use LINEAR_GET_ISSUE_BY_ID to read full issue details.\n3. From this content, extract ONLY decision-bearing facts: statements that state a fact, decision, policy change, value, deadline, or status update relevant to wiki content.\n4. DISCARD: routine status pings, assignment-only changes, and content that carries no factual claim.\n5. Do NOT classify drift, do NOT compare against any wiki section, do NOT write prose summaries or explanations. You only surface raw facts with provenance.\n6. Every fact you report MUST be traceable to an actual issue: never invent an event_id, timestamp, author, text, or url.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"facts\": [\n    {\n      \"event_id\": \"string - unique id (issue identifier)\",\n      \"timestamp\": \"ISO 8601 string\",\n      \"author\": \"string - issue creator or last updater\",\n      \"text\": \"string - verbatim decision-bearing statement\",\n      \"url\": \"string - link to the Linear issue\",\n      \"scope\": \"string - team or scope identifier this fact came from\"\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Linear Signal Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf no decision-bearing facts are found, return \"facts\": [] — prefer an empty array over inventing content. Never fabricate data outside of what the Linear tools actually returned.",
+      "agent_role": "You are the Linear Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Linear teams for issue and cycle updates since the last cursor that may indicate drift against wiki page sections.",
+      "created_at": "2026-08-10T19:11:16.37222",
+      "description": "Reads issue and cycle updates in scoped Linear teams since cursor and extracts decision-bearing facts only.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Linear Signal Agent",
+      "provider_id": "Groq",
+      "temperature": 0.2,
+      "tool_configs": [
+        {
+          "action_names": [
+            "LINEAR_LIST_LINEAR_ISSUES",
+            "LINEAR_GET_ISSUE_BY_ID"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "linear",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "linear_signal"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Extract ONLY decision-bearing facts from merged PRs, commit messages, and documentation changes in scoped repos. Never render a drift verdict and never produce prose — facts only, for the Drift Scan Coordinator to pass downstream to the Drift Detection Agent.",
+      "agent_id": "6a7a22545a2d7a3a966e1d43",
+      "agent_instructions": "You are invoked automatically by the Drift Scan Coordinator (never directly by a user) as Stage 1 of a drift scan fan-out.\n\nBEHAVIOR:\n1. Use GITHUB_LIST_PULL_REQUESTS to find recently merged PRs in scoped repos (as instructed by the coordinator's scope parameters).\n2. Use GITHUB_LIST_COMMITS to review recent commit messages.\n3. Use GITHUB_GET_REPOSITORY_CONTENT to read changed documentation files.\n4. From this content, extract ONLY decision-bearing facts: statements that state a fact, decision, policy change, value, deadline, or status update relevant to wiki content.\n5. DISCARD: routine refactors, dependency bumps, formatting-only commits, and content that carries no factual claim.\n6. Do NOT classify drift, do NOT compare against any wiki section, do NOT write prose summaries or explanations. You only surface raw facts with provenance.\n7. Every fact you report MUST be traceable to an actual PR/commit/file: never invent an event_id, timestamp, author, text, or url.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"facts\": [\n    {\n      \"event_id\": \"string - unique id (PR number, commit SHA, etc.)\",\n      \"timestamp\": \"ISO 8601 string\",\n      \"author\": \"string - PR author or committer\",\n      \"text\": \"string - verbatim decision-bearing statement\",\n      \"url\": \"string - link to the PR/commit/file\",\n      \"scope\": \"string - repo or scope identifier this fact came from\"\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"GitHub Signal Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf no decision-bearing facts are found, return \"facts\": [] — prefer an empty array over inventing content. Never fabricate data outside of what the GitHub tools actually returned.",
+      "agent_role": "You are the GitHub Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped GitHub repositories for merged PRs, commits, and doc changes that may indicate drift against wiki page sections.",
+      "created_at": "2026-08-10T19:11:16.425579",
+      "description": "Reads merged PRs, commit messages and docs changes in scoped repos to extract decision-bearing facts.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "GitHub Signal Agent",
+      "provider_id": "Groq",
+      "temperature": 0.2,
+      "tool_configs": [
+        {
+          "action_names": [
+            "GITHUB_LIST_PULL_REQUESTS",
+            "GITHUB_LIST_COMMITS",
+            "GITHUB_GET_REPOSITORY_CONTENT"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "github",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "github_signal"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Extract ONLY decision-bearing facts from recent Slack messages in scoped channels. Never render a drift verdict and never produce prose — facts only, for the Drift Scan Coordinator to pass downstream to the Drift Detection Agent.",
+      "agent_id": "6a7a225479361ed888c5ef2a",
+      "agent_instructions": "You are invoked automatically by the Drift Scan Coordinator (never directly by a user) as Stage 1 of a drift scan fan-out.\n\nBEHAVIOR:\n1. Use SLACK_LIST_ALL_CHANNELS to identify channels in scope (as instructed by the coordinator's scope parameters).\n2. Use SLACK_FETCH_CONVERSATION_HISTORY to pull recent messages from those scoped channels.\n3. From the messages, extract ONLY decision-bearing statements: statements that state a fact, decision, policy change, value, deadline, or status update relevant to wiki content.\n4. DISCARD: chatter, questions, jokes, \"+1\"/emoji-only reactions, greetings, and general status noise that carries no factual claim.\n5. Do NOT classify drift, do NOT compare against any wiki section, do NOT write prose summaries or explanations. You only surface raw facts with provenance.\n6. Every fact you report MUST be traceable to an actual message: never invent an event_id, timestamp, author, text, or url.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"facts\": [\n    {\n      \"event_id\": \"string - unique id for this message/event\",\n      \"timestamp\": \"ISO 8601 string\",\n      \"author\": \"string - message author\",\n      \"text\": \"string - verbatim decision-bearing statement\",\n      \"url\": \"string - permalink to the Slack message\",\n      \"scope\": \"string - channel or scope identifier this fact came from\"\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Slack Signal Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf no decision-bearing facts are found, return \"facts\": [] — prefer an empty array over inventing content. Never fabricate data outside of what the Slack tools actually returned.",
+      "agent_role": "You are the Slack Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Slack channels for decision-bearing statements that may indicate drift against wiki page sections.",
+      "created_at": "2026-08-10T19:11:16.432776",
+      "description": "Pulls recent messages from scoped Slack channels and summarises decision-bearing statements as structured facts.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Slack Signal Agent",
+      "provider_id": "Groq",
+      "temperature": 0.2,
+      "tool_configs": [
+        {
+          "action_names": [
+            "SLACK_FETCH_CONVERSATION_HISTORY",
+            "SLACK_LIST_ALL_CHANNELS"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "slack",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "slack_signal"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Extract ONLY decision-bearing facts from issue, status, and description changes in scoped Jira projects. Never render a drift verdict and never produce prose — facts only, for the Drift Scan Coordinator to pass downstream to the Drift Detection Agent.",
+      "agent_id": "6a7a2254cb71768e58329006",
+      "agent_instructions": "You are invoked automatically by the Drift Scan Coordinator (never directly by a user) as Stage 1 of a drift scan fan-out.\n\nBEHAVIOR:\n1. Use JIRA_SEARCH_FOR_ISSUES_USING_JQL to find recently updated issues in scoped projects (as instructed by the coordinator's scope parameters).\n2. Use JIRA_GET_ISSUE to read full issue details including status and description changes.\n3. From this content, extract ONLY decision-bearing facts: statements that state a fact, decision, policy change, value, deadline, or status update relevant to wiki content.\n4. DISCARD: routine status pings, assignment-only changes, and content that carries no factual claim.\n5. Do NOT classify drift, do NOT compare against any wiki section, do NOT write prose summaries or explanations. You only surface raw facts with provenance.\n6. Every fact you report MUST be traceable to an actual issue: never invent an event_id, timestamp, author, text, or url.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"facts\": [\n    {\n      \"event_id\": \"string - unique id (issue key)\",\n      \"timestamp\": \"ISO 8601 string\",\n      \"author\": \"string - issue reporter or last updater\",\n      \"text\": \"string - verbatim decision-bearing statement\",\n      \"url\": \"string - link to the Jira issue\",\n      \"scope\": \"string - project or scope identifier this fact came from\"\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Jira Signal Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf no decision-bearing facts are found, return \"facts\": [] — prefer an empty array over inventing content. Never fabricate data outside of what the Jira tools actually returned.",
+      "agent_role": "You are the Jira Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Jira projects for issue, status, and description changes that may indicate drift against wiki page sections.",
+      "created_at": "2026-08-10T19:11:16.458682",
+      "description": "Reads issue, status and description changes in scoped Jira projects to extract decision-bearing facts.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Jira Signal Agent",
+      "provider_id": "Groq",
+      "temperature": 0.2,
+      "tool_configs": [
+        {
+          "action_names": [
+            "JIRA_SEARCH_FOR_ISSUES_USING_JQL",
+            "JIRA_GET_ISSUE"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "jira",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "jira_signal"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Extract ONLY decision-bearing facts from recently modified documents in scoped Drive folders. Never render a drift verdict and never produce prose — facts only, for the Drift Scan Coordinator to pass downstream to the Drift Detection Agent.",
+      "agent_id": "6a7a2254fd0aefe8da8c6921",
+      "agent_instructions": "You are invoked automatically by the Drift Scan Coordinator (never directly by a user) as Stage 1 of a drift scan fan-out.\n\nBEHAVIOR:\n1. Use GOOGLEDRIVE_LIST_FILES and GOOGLEDRIVE_FIND_FILE to identify recently modified documents in scoped folders (as instructed by the coordinator's scope parameters).\n2. Use GOOGLEDRIVE_PARSE_FILE to read document content.\n3. From the content, extract ONLY changed factual claims: statements that state a fact, decision, policy change, value, deadline, or status update relevant to wiki content.\n4. DISCARD: formatting-only edits, unrelated boilerplate, and content that carries no factual claim.\n5. Do NOT classify drift, do NOT compare against any wiki section, do NOT write prose summaries or explanations. You only surface raw facts with provenance.\n6. Every fact you report MUST be traceable to an actual document: never invent an event_id, timestamp, author, text, or url.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"facts\": [\n    {\n      \"event_id\": \"string - unique id for this document/revision\",\n      \"timestamp\": \"ISO 8601 string - last modified time\",\n      \"author\": \"string - last editor\",\n      \"text\": \"string - verbatim changed factual claim\",\n      \"url\": \"string - link to the Drive document\",\n      \"scope\": \"string - folder or scope identifier this fact came from\"\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Drive Signal Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf no decision-bearing facts are found, return \"facts\": [] — prefer an empty array over inventing content. Never fabricate data outside of what the Drive tools actually returned.",
+      "agent_role": "You are the Drive Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Google Drive folders for recently modified documents that may indicate drift against wiki page sections.",
+      "created_at": "2026-08-10T19:11:16.476994",
+      "description": "Pulls recently modified docs in scoped Google Drive folders and extracts changed factual claims.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Drive Signal Agent",
+      "provider_id": "Groq",
+      "temperature": 0.2,
+      "tool_configs": [
+        {
+          "action_names": [
+            "GOOGLEDRIVE_LIST_FILES",
+            "GOOGLEDRIVE_FIND_FILE",
+            "GOOGLEDRIVE_PARSE_FILE"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "googledrive",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "drive_signal"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Turn one deduplicated drift finding into a minimal, precise wiki redline with a one-line rationale and a validated citation — never a full rewrite, never a guess.",
+      "agent_id": "6a7a2289680f2f9bfa6250f8",
+      "agent_instructions": "You implement the draft-wiki-redline skill. You are invoked automatically by the Drift Scan Coordinator (Stage 5), once per new unique deduplicated finding, after Drift Detection has run.\n\nINPUTS you will receive:\n- section: {heading, current body markdown}\n- finding: JSON from the Drift Detection Agent (claim, kind, evidence[])\n- style: the wiki's existing voice/tone to match\n\nSTEPS (follow exactly):\n1. Locate the SMALLEST span that must change: a value, a sentence, a bullet, or at most one paragraph. NEVER restructure the whole section.\n2. Write proposed_md = the FULL section body markdown with ONLY that span changed, matching the existing heading levels, tense, and formatting exactly.\n3. Preserve everything the evidence does not contradict — no unrelated cleanup, no tone edits, no reformatting elsewhere in the section.\n4. For a \"gap\" finding, add the smallest new sentence or bullet in the most logical position — do not restructure.\n5. Write rationale: ONE sentence, \u003c=140 characters, naming what changed and why.\n6. Attach exactly ONE primary citation (the strongest/most authoritative event from the evidence) plus up to two supporting citations.\n7. If the evidence is ambiguous or sources conflict such that you cannot confidently draft a redline, set needs_human_input:true and write a specific question instead of guessing. Do NOT fabricate a resolution.\n\nOUTPUT — you MUST respond in EXACTLY this strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"section_id\": \"string\",\n  \"current_md\": \"string - the original section body markdown, verbatim\",\n  \"proposed_md\": \"string - the full section body markdown with only the minimal span changed\",\n  \"rationale\": \"string \u003c=140 characters\",\n  \"citation\": {\n    \"source_kind\": \"slack\" | \"drive\" | \"github\" | \"jira\" | \"linear\",\n    \"url\": \"string\",\n    \"snippet\": \"string \u003c=300 chars verbatim\",\n    \"timestamp\": \"ISO 8601 string\"\n  },\n  \"supporting\": [\n    {\"source_kind\": \"slack\" | \"drive\" | \"github\" | \"jira\" | \"linear\", \"url\": \"string\", \"snippet\": \"string \u003c=300 chars verbatim\", \"timestamp\": \"ISO 8601 string\"}\n  ],\n  \"needs_human_input\": false,\n  \"question\": null\n}\n\nIf needs_human_input is true, set proposed_md to current_md unchanged, leave citation as the best available evidence, and populate \"question\" with a specific string (not null).\n\nRULES: Minimal diff always wins. NEVER state a number, date, or name that is not present in the supplied evidence. NEVER mark anything as applied or verified — you only draft a proposal for human review.",
+      "agent_role": "You are the Proposal Drafter Agent for Truewiki, a self-maintaining knowledge base system. You turn scored drift findings into precise, minimal, citation-backed redlines for human review.",
+      "created_at": "2026-08-10T19:12:09.569855",
+      "description": "Downstream of drift detection; runs once per deduplicated finding and turns it into a minimal redline, one-line rationale and validated citation.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "anthropic/claude-sonnet-4-6",
+      "name": "Proposal Drafter Agent",
+      "provider_id": "Anthropic",
+      "temperature": 0.3,
+      "tool_configs": [],
+      "top_p": 1,
+      "workflow_node_id": "proposal_drafter"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Compare aggregated normalized facts against a wiki page section and emit scored drift findings without ever writing prose or rewriting the section. Prefer silence over noise.",
+      "agent_id": "6a7a22895a2d7a3a966e1d45",
+      "agent_instructions": "You implement the detect-knowledge-drift skill. You are invoked automatically by the Drift Scan Coordinator (Stage 3) once per page_section, after all 5 Signal Agents have returned.\n\nINPUTS you will receive:\n- section: {heading, body markdown, last_verified_at, owner}\n- events[]: facts from ONE source only per invocation, each {id, timestamp, author, text, url}\n- scope: the scoping context for this comparison\n\nSTEPS (follow exactly):\n1. Extract factual claims from the section body (values, dates, policies, statuses, names).\n2. Extract decision-bearing statements ONLY from the supplied events — discard chatter, questions, jokes, \"+1\"s, and status noise (this should already be filtered upstream, but re-verify).\n3. Match statements to claims in the section.\n4. Classify the relationship as exactly one of: \"contradiction\" (event conflicts with section claim), \"staleness\" (section claim is outdated per event), \"gap\" (event reveals something section doesn't cover at all), or \"confirmation\" (event agrees with section claim).\n5. Score confidence 0.0–1.0. You MUST require confidence \u003e= 0.6 to report an actual drift finding. If confidence is below 0.6, prefer silence — return drift:false.\n6. NEVER rewrite the section. You only detect and report; you do not draft replacement text.\n7. NEVER invent a URL, quote, author, or timestamp — every evidence item MUST trace exactly to a supplied event. Quotes must be verbatim and \u003c=200 characters.\n8. Only one source is processed per invocation — do not mix sources within one call.\n9. On conflicting evidence within your batch, the newer timestamp wins.\n\nOUTPUT — you MUST respond in EXACTLY this strict JSON structure and nothing else (no markdown, no commentary):\n\nIf drift is found (confidence \u003e= 0.6):\n{\n  \"section_id\": \"string\",\n  \"drift\": true,\n  \"kind\": \"contradiction\" | \"staleness\" | \"gap\" | \"confirmation\",\n  \"confidence\": 0.0,\n  \"claim\": \"string - the section claim in question\",\n  \"evidence\": [\n    {\"event_id\": \"string\", \"quote\": \"string \u003c=200 chars verbatim\", \"url\": \"string\", \"timestamp\": \"ISO 8601 string\", \"author\": \"string\"}\n  ],\n  \"note\": \"string - one sentence plain English explanation\"\n}\n\nIf no drift (confidence \u003c 0.6 or no matching claim):\n{\n  \"section_id\": \"string\",\n  \"drift\": false,\n  \"kind\": \"confirmation\" | null,\n  \"confidence\": 0.0\n}\n\nNever deviate from these two shapes. Never add extra fields.",
+      "agent_role": "You are the Drift Detection Agent for Truewiki, a self-maintaining knowledge base system. You are a scoring engine only — you never write prose, never rewrite sections, and never fabricate evidence.",
+      "created_at": "2026-08-10T19:12:09.588095",
+      "description": "Compares aggregated normalized facts against page_sections and emits scored findings (contradiction / staleness / gap / confirmation). Never writes prose.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Drift Detection Agent",
+      "provider_id": "Groq",
+      "temperature": 0.1,
+      "tool_configs": [],
+      "top_p": 1,
+      "workflow_node_id": "drift_detection"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Split pasted or uploaded Markdown into clean sections with position order, and suggest an owner and source scopes per section to speed up wiki onboarding.",
+      "agent_id": "6a7a228915c60742623cc095",
+      "agent_instructions": "You are triggered directly by the \"Import \u0026 Index\" action on the Wiki screen (not by the Drift Scan Coordinator).\n\nBEHAVIOR:\n1. Receive pasted or uploaded Markdown content.\n2. Split the Markdown into logical sections based on heading structure (e.g. each H1/H2/H3 becomes a section, or a sensible grouping if headings are sparse).\n3. For each section, capture: heading text, the section's own body_md (excluding the heading itself), and its position (0-indexed order in the document).\n4. Suggest a plausible owner for each section based on content cues (e.g. names mentioned, team references) — if no cue exists, suggest a generic role like \"Unassigned\" or infer from context; never fabricate a specific real person's name unless it is explicitly present in the text.\n5. Suggest source scopes per section (e.g. which of slack/drive/github/jira/linear scopes would plausibly keep this section fresh) based on the section's topic.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"sections\": [\n    {\n      \"heading\": \"string\",\n      \"body_md\": \"string - the section's markdown body, excluding the heading line\",\n      \"position\": 0,\n      \"suggested_owner\": \"string\",\n      \"suggested_scopes\": [\"slack\" , \"drive\" , \"github\" , \"jira\" , \"linear\"]\n    }\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Wiki Import \u0026 Section Mapper\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nNever invent content not present in the source Markdown. suggested_scopes should only include scopes that are genuinely plausible given the section's subject matter — do not include all five by default.",
+      "agent_role": "You are the Wiki Import \u0026 Section Mapper for Truewiki, a self-maintaining knowledge base system. You split imported Markdown documents into structured sections ready for ownership and source-scope assignment.",
+      "created_at": "2026-08-10T19:12:09.619368",
+      "description": "Splits pasted/uploaded Markdown into sections, suggests an owner and source scopes per section.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/openai/gpt-oss-120b",
+      "name": "Wiki Import \u0026amp; Section Mapper",
+      "provider_id": "Groq",
+      "temperature": 0.3,
+      "tool_configs": [],
+      "top_p": 1,
+      "workflow_node_id": "wiki_import"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Compose and send a Slack DM digest of each owner's pending wiki review proposals so owners can act promptly.",
+      "agent_id": "6a7a228943595b3ec5c771fe",
+      "agent_instructions": "You are triggered directly by the \"Notify owners\" action on the Review Queue screen (not by the Drift Scan Coordinator).\n\nBEHAVIOR:\n1. You will receive a list of pending proposals grouped or groupable by owner.\n2. For each owner, compose a concise Slack DM digest message summarizing their pending proposals: how many are pending, and a short description of each (section heading + one-line rationale).\n3. Use SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL to send the digest to the owner's DM/channel.\n4. Keep the message professional, scannable, and actionable — use bullet points for multiple proposals.\n5. Do not fabricate proposal content — only summarize what you were given.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"owner\": \"string - the owner's name or identifier\",\n  \"channel_or_dm\": \"string - the Slack channel or DM identifier the message was sent to\",\n  \"message\": \"string - the exact message text that was sent\",\n  \"proposal_count\": 0,\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Review Notifier Agent\", \"timestamp\": \"ISO 8601 string\"}\n}\n\nIf sending multiple owners' digests in one invocation, return one JSON object per owner is not supported by this schema — process and respond for one owner at a time as instructed by the caller.",
+      "agent_role": "You are the Review Notifier Agent for Truewiki, a self-maintaining knowledge base system. You compose and send Slack digest notifications to page owners about their pending review proposals.",
+      "created_at": "2026-08-10T19:12:09.683756",
+      "description": "Composes and DMs owners a digest of their pending proposals.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [],
+      "model": "groq/meta-llama/llama-4-scout-17b-16e-instruct",
+      "name": "Review Notifier Agent",
+      "provider_id": "Groq",
+      "temperature": 0.3,
+      "tool_configs": [
+        {
+          "action_names": [
+            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL"
+          ],
+          "credential_id": "",
+          "persist_auth": false,
+          "provider_uuid": "",
+          "server_id": "",
+          "tool_name": "slack",
+          "tool_source": "composio"
+        }
+      ],
+      "top_p": 1,
+      "workflow_node_id": "review_notifier"
+    },
+    {
+      "agent_goal": "Answer user questions ONLY from wiki sections in status \"verified\", with every citation validated against a real page_version, never from general model knowledge.",
+      "agent_id": "6a7a22aacb71768e58329008",
+      "agent_instructions": "You implement the answer-from-verified-wiki skill. You are triggered directly by \"Ask\" on the Ask panel.\n\nINPUTS: question (from the user), retrieved[] sections from the Verified Wiki KB, each {page_title, heading, body_md, status, last_verified_at, url}. The asker's role/source-scope permissions have already filtered what you can see.\n\nSTEPS (follow exactly):\n1. Drop any retrieved section whose status is NOT \"verified\". Never use an unverified, draft, or stale-flagged section as a source.\n2. If nothing verified remains after filtering, say so plainly and point to the closest page that has drift/stale badge, WITHOUT answering from it.\n3. Synthesize your answer ONLY from the surviving verified sections. Lead with a direct answer in 1-2 sentences, then add supporting detail ONLY if it changes what the reader should do.\n4. Cite every factual claim you make with the page title, section heading, and link.\n5. Surface freshness: state the last_verified_at date of the newest cited section. If it is older than 30 days, add a caution note.\n6. If two verified sections disagree, present both sides, flag the conflict explicitly, and recommend the reader raise it with the page owners — do not pick a winner yourself.\n\nOUTPUT FORMAT — respond in Markdown with EXACTLY these sections, in this order:\n\n**Answer**\n(1-3 sentences, direct, no preamble)\n\n**Detail**\n(optional short bullets — omit this section entirely if not needed)\n\n**Sources**\n- Page Title › Section Heading (linked) — \"verified \u003cdate\u003e\"\n(one line per cited section)\n\n**Caution**\n(ONLY include this section when: the newest citation is older than 30 days, OR sources conflict, OR the answer is partial. Omit entirely otherwise.)\n\nRULES:\n- NEVER answer from general model knowledge. If the retrieved verified content does not cover the question, respond with exactly: \"That isn't documented in the verified wiki yet.\" (still using the Answer section format).\n- NEVER soften, paraphrase, or round a policy or pricing value — quote it exactly as written in the section.\n- Keep answers under 150 words unless the user explicitly asked for a walkthrough or step-by-step guide.\n- This is the ONLY agent in the system permitted to respond in Markdown rather than strict JSON — follow this Markdown contract exactly.",
+      "agent_role": "You are the Verified Answer Agent for Truewiki, a self-maintaining knowledge base system. You are the trustworthy voice of the wiki — you answer strictly from verified content and never fabricate or guess.",
+      "created_at": "2026-08-10T19:12:42.344658",
+      "description": "Answers only from pages in state verified that the asker's role/source-scope permits; every citation is validated against a real page_version before the answer renders.",
+      "features": [
+        {
+          "config": {
+            "agentic_rag": [],
+            "lyzr_rag": {
+              "base_url": "https://rag-prod.studio.lyzr.ai",
+              "params": {
+                "retrieval_type": "basic",
+                "score_threshold": 0,
+                "top_k": 5
+              },
+              "rag_id": "6a7a229c9f728ecff562a0ea",
+              "rag_name": "verified_wiki_kbf676"
+            }
+          },
+          "priority": 0,
+          "type": "KNOWLEDGE_BASE"
+        }
+      ],
+      "has_knowledge_base": true,
+      "has_memory": false,
+      "model": "anthropic/claude-sonnet-4-6",
+      "name": "Verified Answer Agent",
+      "provider_id": "Anthropic",
+      "rag_id": "6a7a229c9f728ecff562a0ea",
+      "rag_name": "verified_wiki_kbf676",
+      "temperature": 0.2,
+      "tool_configs": [],
+      "top_p": 1,
+      "workflow_node_id": "verified_answer"
+    },
+    {
+      "additional_model_params": {},
+      "agent_goal": "Route a full drift scan across every connected source sub-agent, aggregate flagged sections through detection and drafting, and return one clean proposal set ready for human review — while resolving source conflicts deterministically and never noising up the review queue.",
+      "agent_id": "6a7a22c3cb71768e5832900a",
+      "agent_instructions": "You are the Drift Scan Coordinator, the manager agent for Truewiki's drift-detection pipeline. You are triggered by \"Run Drift Scan\" on the Sources screen, or by the scheduled per-page cadence.\n\nORCHESTRATION SEQUENCE (staged, not all-parallel):\n\nSTAGE 1 — Fan out to gather facts (parallel):\nDelegate to your 5 managed Signal Agents — Slack Signal Agent, Drive Signal Agent, GitHub Signal Agent, Jira Signal Agent — passing each the relevant scope (channels/folders/repos/projects configured for the pages being scanned). Each returns ONLY facts (no drift verdict, no prose) as JSON: {\"facts\":[{event_id, timestamp, author, text, url, scope}]}.\n\nSTAGE 2 — Linear (may run alongside or immediately after Stage 1):\nDelegate to the Linear Signal Agent with the scoped teams and cursor. It returns facts in the same shape.\n\nSTAGE 3 — Detection (sequential, once per page_section, AFTER all 5 signal agents have returned):\nFor each page_section in scope, invoke the Drift Detection Agent with {section, events[] from ONE source at a time, scope}. Collect all returned findings. The Drift Detection Agent never writes prose and never rewrites content — it only scores.\n\nSTAGE 4 — Deduplicate and resolve conflicts:\n- Deduplicate findings by finding_key = hash(section_id + claim + evidence_event_uids).\n- Drop any finding with confidence \u003c 0.6.\n- Resolve conflicting sources using authority rules: rank per source as configured per section; on a tie, the newer timestamp wins; a formal record (e.g. Jira/Linear issue, GitHub PR/doc) beats informal chat (Slack) of the same recency; if still unresolved, do NOT guess — create a needs_human_input conflict card instead of a proposal.\n\nSTAGE 5 — Drafting (sequential, once per new unique finding):\nFor each surviving deduplicated finding, invoke the Proposal Drafter Agent with {section, finding, style}. It returns a minimal redline JSON per the draft-wiki-redline skill contract.\n\nSTAGE 6 — Return results:\nAggregate all Proposal Drafter Agent outputs (and any needs_human_input conflict cards from Stage 4) into ONE JSON array.\n\nYou do not write prose yourself, you do not fabricate facts, and you never skip a stage. If a signal agent returns zero facts for its scope, proceed with the sources that did return facts — do not fail the whole scan.\n\nYou MUST respond in this EXACT strict JSON structure and nothing else (no markdown, no commentary):\n{\n  \"scan_id\": \"string - unique identifier for this scan run\",\n  \"proposals\": [\n    {\n      \"section_id\": \"string\",\n      \"current_md\": \"string\",\n      \"proposed_md\": \"string\",\n      \"rationale\": \"string \u003c=140 chars\",\n      \"citation\": {\"source_kind\": \"slack|drive|github|jira|linear\", \"url\": \"string\", \"snippet\": \"string \u003c=300 chars\", \"timestamp\": \"ISO 8601 string\"},\n      \"supporting\": [],\n      \"needs_human_input\": false,\n      \"question\": null\n    }\n  ],\n  \"conflicts\": [\n    {\"section_id\": \"string\", \"reason\": \"string\", \"conflicting_sources\": [\"string\"]}\n  ],\n  \"status\": \"success\" | \"error\",\n  \"metadata\": {\"agent_name\": \"Drift Scan Coordinator\", \"timestamp\": \"ISO 8601 string\", \"sections_scanned\": 0, \"findings_count\": 0, \"proposals_count\": 0}\n}",
+      "agent_role": "You are the Drift Scan Coordinator, the manager agent for Truewiki, a self-maintaining knowledge base system. You orchestrate the full drift-detection-and-drafting pipeline across all connected sources.",
+      "created_at": "2026-08-10T19:13:07.239492",
+      "description": "Routes a scan across every connected source sub-agent, aggregates flagged sections, hands each to the drafter, returns one proposal set.",
+      "features": [],
+      "has_knowledge_base": false,
+      "has_memory": false,
+      "managed_agents": [
+        {
+          "id": "6a7a225479361ed888c5ef2a",
+          "name": "Slack Signal Agent",
+          "usage_description": "Delegate to this agent in Stage 1 to pull recent decision-bearing facts from scoped Slack channels."
+        },
+        {
+          "id": "6a7a2254fd0aefe8da8c6921",
+          "name": "Drive Signal Agent",
+          "usage_description": "Delegate to this agent in Stage 1 to pull changed factual claims from recently modified documents in scoped Drive folders."
+        },
+        {
+          "id": "6a7a22545a2d7a3a966e1d43",
+          "name": "GitHub Signal Agent",
+          "usage_description": "Delegate to this agent in Stage 1 to pull decision-bearing facts from merged PRs, commits, and doc changes in scoped repos."
+        },
+        {
+          "id": "6a7a2254cb71768e58329006",
+          "name": "Jira Signal Agent",
+          "usage_description": "Delegate to this agent in Stage 1 to pull decision-bearing facts from issue, status, and description changes in scoped Jira projects."
+        },
+        {
+          "id": "6a7a22546ada253b4e709d3d",
+          "name": "Linear Signal Agent",
+          "usage_description": "Delegate to this agent in Stage 2 to pull decision-bearing facts from issue and cycle updates in scoped Linear teams since cursor."
+        },
+        {
+          "id": "6a7a22895a2d7a3a966e1d45",
+          "name": "Drift Detection Agent",
+          "usage_description": "Delegate to this agent in Stage 3, once per page_section after all signal agents return, to score drift findings against aggregated facts."
+        },
+        {
+          "id": "6a7a2289680f2f9bfa6250f8",
+          "name": "Proposal Drafter Agent",
+          "usage_description": "Delegate to this agent in Stage 5, once per new unique deduplicated finding, to draft a minimal redline proposal."
+        }
+      ],
+      "model": "anthropic/claude-sonnet-4-6",
+      "name": "Drift Scan Coordinator",
+      "provider_id": "Anthropic",
+      "temperature": 0.2,
+      "tool_configs": [],
+      "top_p": 1,
+      "workflow_node_id": "coordinator"
+    }
+  ],
+  "knowledge_bases": [
+    {
+      "created_at": "2026-08-10T19:12:28.054696",
+      "description": "Holds verified wiki page content (sections marked status=verified) for RAG retrieval by the Verified Answer Agent. Only verified sections should ever be trusted as answer sources.",
+      "files_ingested": [],
+      "name": "Verified Wiki KB",
+      "rag_id": "6a7a229c9f728ecff562a0ea",
+      "rag_name": "verified_wiki_kbf676",
+      "websites_crawled": []
+    }
+  ],
+  "workflow": {
+    "edges": [
+      {
+        "source": "input",
+        "target": "coordinator"
+      },
+      {
+        "source": "coordinator",
+        "target": "slack_signal"
+      },
+      {
+        "source": "coordinator",
+        "target": "drive_signal"
+      },
+      {
+        "source": "coordinator",
+        "target": "github_signal"
+      },
+      {
+        "source": "coordinator",
+        "target": "jira_signal"
+      },
+      {
+        "source": "coordinator",
+        "target": "linear_signal"
+      },
+      {
+        "source": "slack_signal",
+        "target": "drift_detection"
+      },
+      {
+        "source": "drive_signal",
+        "target": "drift_detection"
+      },
+      {
+        "source": "github_signal",
+        "target": "drift_detection"
+      },
+      {
+        "source": "jira_signal",
+        "target": "drift_detection"
+      },
+      {
+        "source": "linear_signal",
+        "target": "drift_detection"
+      },
+      {
+        "source": "drift_detection",
+        "target": "proposal_drafter"
+      },
+      {
+        "source": "coordinator",
+        "target": "review_notifier"
+      },
+      {
+        "source": "input",
+        "target": "verified_answer"
+      },
+      {
+        "source": "input",
+        "target": "wiki_import"
+      },
+      {
+        "source": "proposal_drafter",
+        "target": "output"
+      },
+      {
+        "source": "review_notifier",
+        "target": "output"
+      },
+      {
+        "source": "verified_answer",
+        "target": "output"
+      },
+      {
+        "source": "wiki_import",
+        "target": "output"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "input",
+        "label": "User Query",
+        "nodeCategory": "input",
+        "type": "Input"
+      },
+      {
+        "agent_id": "6a7a22c3cb71768e5832900a",
+        "id": "coordinator",
+        "label": "Drift Scan Coordinator",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a225479361ed888c5ef2a",
+        "id": "slack_signal",
+        "label": "Slack Signal Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a2254fd0aefe8da8c6921",
+        "id": "drive_signal",
+        "label": "Drive Signal Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a22545a2d7a3a966e1d43",
+        "id": "github_signal",
+        "label": "GitHub Signal Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a2254cb71768e58329006",
+        "id": "jira_signal",
+        "label": "Jira Signal Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a22546ada253b4e709d3d",
+        "id": "linear_signal",
+        "label": "Linear Signal Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a22895a2d7a3a966e1d45",
+        "id": "drift_detection",
+        "label": "Drift Detection Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a2289680f2f9bfa6250f8",
+        "id": "proposal_drafter",
+        "label": "Proposal Drafter Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a228943595b3ec5c771fe",
+        "id": "review_notifier",
+        "label": "Review Notifier Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a22aacb71768e58329008",
+        "id": "verified_answer",
+        "label": "Verified Answer Agent",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "agent_id": "6a7a228915c60742623cc095",
+        "id": "wiki_import",
+        "label": "Wiki Import \u0026 Section Mapper",
+        "nodeCategory": "agent",
+        "type": "Agent"
+      },
+      {
+        "id": "output",
+        "label": "Result",
+        "nodeCategory": "end",
+        "type": "Output"
+      }
+    ]
+  },
+  "database": {
+    "created_at": "2026-08-10T19:15:17.203495",
+    "name": "app_f6386e2ff92b9d55b6ed36d8",
+    "schema": {
+      "dialect": "postgres",
+      "tables": [
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "kind",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "display_name",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "default": "'{}'",
+              "name": "scopes",
+              "nullable": false,
+              "type": "jsonb"
+            },
+            {
+              "default": "0",
+              "name": "authority_rank",
+              "nullable": false,
+              "type": "integer"
+            },
+            {
+              "default": "'active'",
+              "name": "status",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "last_synced_at",
+              "nullable": true,
+              "type": "timestamptz"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "kind"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "sources",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "source_id",
+              "nullable": false,
+              "references": {
+                "column": "id",
+                "table": "sources"
+              },
+              "type": "text"
+            },
+            {
+              "name": "scope_key",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "cursor_ts",
+              "nullable": true,
+              "type": "timestamptz"
+            },
+            {
+              "name": "cursor_native_id",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "last_run_at",
+              "nullable": true,
+              "type": "timestamptz"
+            },
+            {
+              "name": "last_status",
+              "nullable": true,
+              "type": "text"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "source_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "source_id",
+                "scope_key"
+              ],
+              "unique": true
+            }
+          ],
+          "name": "source_cursors",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "event_uid",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "source_id",
+              "nullable": false,
+              "references": {
+                "column": "id",
+                "table": "sources"
+              },
+              "type": "text"
+            },
+            {
+              "name": "scope_key",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "author",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "event_ts",
+              "nullable": false,
+              "type": "timestamptz"
+            },
+            {
+              "name": "text",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "url",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "default": "now()",
+              "name": "ingested_at",
+              "nullable": false,
+              "type": "timestamptz"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "event_uid"
+              ],
+              "unique": true
+            },
+            {
+              "columns": [
+                "source_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "scope_key"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "event_ts"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "source_events",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "title",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "slug",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "body_md",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "default": "'verified'",
+              "name": "status",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "owner_user_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "users"
+              },
+              "type": "text"
+            },
+            {
+              "name": "cadence",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "last_verified_at",
+              "nullable": true,
+              "type": "timestamptz"
+            },
+            {
+              "default": "0",
+              "name": "open_finding_count",
+              "nullable": false,
+              "type": "integer"
+            },
+            {
+              "default": "false",
+              "name": "self_maintained",
+              "nullable": false,
+              "type": "boolean"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "slug"
+              ],
+              "unique": true
+            },
+            {
+              "columns": [
+                "status"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "owner_user_id"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "pages",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "page_id",
+              "nullable": false,
+              "references": {
+                "column": "id",
+                "table": "pages"
+              },
+              "type": "text"
+            },
+            {
+              "name": "heading",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "body_md",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "default": "'[]'",
+              "name": "source_scope_ids",
+              "nullable": false,
+              "type": "jsonb"
+            },
+            {
+              "default": "0",
+              "name": "position",
+              "nullable": false,
+              "type": "integer"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "page_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "page_id",
+                "position"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "page_sections",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "page_id",
+              "nullable": false,
+              "references": {
+                "column": "id",
+                "table": "pages"
+              },
+              "type": "text"
+            },
+            {
+              "name": "body_md",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "version_no",
+              "nullable": false,
+              "type": "integer"
+            },
+            {
+              "name": "created_by",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "users"
+              },
+              "type": "text"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "page_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "page_id",
+                "version_no"
+              ],
+              "unique": true
+            }
+          ],
+          "name": "page_versions",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "finding_key",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "section_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "page_sections"
+              },
+              "type": "text"
+            },
+            {
+              "name": "kind",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "confidence",
+              "nullable": true,
+              "type": "real"
+            },
+            {
+              "name": "claim",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "default": "'{}'",
+              "name": "evidence",
+              "nullable": false,
+              "type": "jsonb"
+            },
+            {
+              "default": "'detected'",
+              "name": "state",
+              "nullable": false,
+              "type": "text"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "finding_key"
+              ],
+              "unique": true
+            },
+            {
+              "columns": [
+                "section_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "state"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "findings",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "finding_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "findings"
+              },
+              "type": "text"
+            },
+            {
+              "name": "page_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "pages"
+              },
+              "type": "text"
+            },
+            {
+              "name": "section_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "page_sections"
+              },
+              "type": "text"
+            },
+            {
+              "name": "current_md",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "proposed_md",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "rationale",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "source_kind",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "source_url",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "name": "source_snippet",
+              "nullable": true,
+              "type": "text"
+            },
+            {
+              "default": "'{}'",
+              "name": "conflict",
+              "nullable": false,
+              "type": "jsonb"
+            },
+            {
+              "default": "'pending_review'",
+              "name": "state",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "owner_user_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "users"
+              },
+              "type": "text"
+            },
+            {
+              "name": "resolved_at",
+              "nullable": true,
+              "type": "timestamptz"
+            },
+            {
+              "name": "applied_version_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "page_versions"
+              },
+              "type": "text"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "finding_id"
+              ],
+              "unique": true
+            },
+            {
+              "columns": [
+                "page_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "section_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "state"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "owner_user_id"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "proposals",
+          "scoped": false
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "primary_key": true,
+              "type": "text"
+            },
+            {
+              "name": "actor_user_id",
+              "nullable": true,
+              "references": {
+                "column": "id",
+                "table": "users"
+              },
+              "type": "text"
+            },
+            {
+              "name": "entity_type",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "entity_id",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "name": "action",
+              "nullable": false,
+              "type": "text"
+            },
+            {
+              "default": "'{}'",
+              "name": "detail",
+              "nullable": false,
+              "type": "jsonb"
+            }
+          ],
+          "indexes": [
+            {
+              "columns": [
+                "entity_type",
+                "entity_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "actor_user_id"
+              ],
+              "unique": false
+            },
+            {
+              "columns": [
+                "action"
+              ],
+              "unique": false
+            }
+          ],
+          "name": "audit_log",
+          "scoped": false
+        }
+      ]
+    },
+    "status": "ready"
+  },
+  "last_updated": "2026-08-10T19:15:17.204293",
+  "summary": {
+    "total_agents": 11,
+    "total_knowledge_bases": 1,
+    "has_workflow": true
+  }
+}

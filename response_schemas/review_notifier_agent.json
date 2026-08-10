@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "channel_or_dm": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "metadata": {
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "proposal_count": {
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "error"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "owner",
+    "channel_or_dm",
+    "message",
+    "proposal_count",
+    "status",
+    "metadata"
+  ],
+  "type": "object"
+}

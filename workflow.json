@@ -1,0 +1,54 @@
+{
+  "nodes": [
+    {"id": "input", "type": "Input", "label": "User Query", "nodeCategory": "input"},
+    {"id": "coordinator", "type": "Agent", "label": "Drift Scan Coordinator", "nodeCategory": "agent", "agent_id": "6a7a22c3cb71768e5832900a"},
+    {"id": "slack_signal", "type": "Agent", "label": "Slack Signal Agent", "nodeCategory": "agent", "agent_id": "6a7a225479361ed888c5ef2a"},
+    {"id": "drive_signal", "type": "Agent", "label": "Drive Signal Agent", "nodeCategory": "agent", "agent_id": "6a7a2254fd0aefe8da8c6921"},
+    {"id": "github_signal", "type": "Agent", "label": "GitHub Signal Agent", "nodeCategory": "agent", "agent_id": "6a7a22545a2d7a3a966e1d43"},
+    {"id": "jira_signal", "type": "Agent", "label": "Jira Signal Agent", "nodeCategory": "agent", "agent_id": "6a7a2254cb71768e58329006"},
+    {"id": "linear_signal", "type": "Agent", "label": "Linear Signal Agent", "nodeCategory": "agent", "agent_id": "6a7a22546ada253b4e709d3d"},
+    {"id": "drift_detection", "type": "Agent", "label": "Drift Detection Agent", "nodeCategory": "agent", "agent_id": "6a7a22895a2d7a3a966e1d45"},
+    {"id": "proposal_drafter", "type": "Agent", "label": "Proposal Drafter Agent", "nodeCategory": "agent", "agent_id": "6a7a2289680f2f9bfa6250f8"},
+    {"id": "review_notifier", "type": "Agent", "label": "Review Notifier Agent", "nodeCategory": "agent", "agent_id": "6a7a228943595b3ec5c771fe"},
+    {"id": "verified_answer", "type": "Agent", "label": "Verified Answer Agent", "nodeCategory": "agent", "agent_id": "6a7a22aacb71768e58329008"},
+    {"id": "wiki_import", "type": "Agent", "label": "Wiki Import & Section Mapper", "nodeCategory": "agent", "agent_id": "6a7a228915c60742623cc095"},
+    {"id": "output", "type": "Output", "label": "Result", "nodeCategory": "end"}
+  ],
+  "edges": [
+    {"source": "input", "target": "coordinator"},
+    {"source": "coordinator", "target": "slack_signal"},
+    {"source": "coordinator", "target": "drive_signal"},
+    {"source": "coordinator", "target": "github_signal"},
+    {"source": "coordinator", "target": "jira_signal"},
+    {"source": "coordinator", "target": "linear_signal"},
+    {"source": "slack_signal", "target": "drift_detection"},
+    {"source": "drive_signal", "target": "drift_detection"},
+    {"source": "github_signal", "target": "drift_detection"},
+    {"source": "jira_signal", "target": "drift_detection"},
+    {"source": "linear_signal", "target": "drift_detection"},
+    {"source": "drift_detection", "target": "proposal_drafter"},
+    {"source": "coordinator", "target": "review_notifier"},
+    {"source": "input", "target": "verified_answer"},
+    {"source": "input", "target": "wiki_import"},
+    {"source": "proposal_drafter", "target": "output"},
+    {"source": "review_notifier", "target": "output"},
+    {"source": "verified_answer", "target": "output"},
+    {"source": "wiki_import", "target": "output"}
+  ],
+  "agents": [
+    {"type": "hosted", "node_id": "coordinator", "agent_id": "6a7a22c3cb71768e5832900a", "name": "Drift Scan Coordinator", "role": "manager", "provider": "Anthropic", "model": "anthropic/claude-sonnet-4-6"},
+    {"type": "hosted", "node_id": "slack_signal", "agent_id": "6a7a225479361ed888c5ef2a", "name": "Slack Signal Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "drive_signal", "agent_id": "6a7a2254fd0aefe8da8c6921", "name": "Drive Signal Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "github_signal", "agent_id": "6a7a22545a2d7a3a966e1d43", "name": "GitHub Signal Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "jira_signal", "agent_id": "6a7a2254cb71768e58329006", "name": "Jira Signal Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "linear_signal", "agent_id": "6a7a22546ada253b4e709d3d", "name": "Linear Signal Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "drift_detection", "agent_id": "6a7a22895a2d7a3a966e1d45", "name": "Drift Detection Agent", "role": "sub_agent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"},
+    {"type": "hosted", "node_id": "proposal_drafter", "agent_id": "6a7a2289680f2f9bfa6250f8", "name": "Proposal Drafter Agent", "role": "sub_agent", "provider": "Anthropic", "model": "anthropic/claude-sonnet-4-6"},
+    {"type": "hosted", "node_id": "review_notifier", "agent_id": "6a7a228943595b3ec5c771fe", "name": "Review Notifier Agent", "role": "independent", "provider": "Groq", "model": "groq/meta-llama/llama-4-scout-17b-16e-instruct"},
+    {"type": "hosted", "node_id": "verified_answer", "agent_id": "6a7a22aacb71768e58329008", "name": "Verified Answer Agent", "role": "independent", "provider": "Anthropic", "model": "anthropic/claude-sonnet-4-6", "knowledge_base": {"rag_id": "6a7a229c9f728ecff562a0ea", "rag_name": "verified_wiki_kbf676", "name": "Verified Wiki KB"}},
+    {"type": "hosted", "node_id": "wiki_import", "agent_id": "6a7a228915c60742623cc095", "name": "Wiki Import & Section Mapper", "role": "independent", "provider": "Groq", "model": "groq/openai/gpt-oss-120b"}
+  ],
+  "knowledge_bases": [
+    {"name": "Verified Wiki KB", "rag_id": "6a7a229c9f728ecff562a0ea", "rag_name": "verified_wiki_kbf676", "used_by": ["verified_answer"]}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "This agent responds in Markdown text (not JSON) per the answer-from-verified-wiki skill contract.",
+  "properties": {
+    "markdown_response": {
+      "description": "Markdown with sections in order: **Answer** (1-3 sentences direct), **Detail** (optional bullets), **Sources** (Page Title › Section Heading links each with 'verified \u003cdate\u003e'), **Caution** (only if \u003e30 days old / conflicting / partial)",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
