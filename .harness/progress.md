@@ -1,8 +1,6 @@
 # Progress
 
-- [x] `1` Create workflow structure and Truewiki agents (Manager + 5 Signal Agents + Drift Detection + Proposal Drafter + Review Notifier + Verified Answer + Wiki Import Mapper) with skills and response schemas _(high priority)_
-- [x] `2` Design & provision Postgres database (users, sources, source_cursors, source_events, findings, pages, page_sections, page_versions, proposals, audit_log) _(high priority)_
-- [x] `3` Build complete UI (Sources, Wiki, Review Queue, Ask, Audit Log, Settings) with auth _(high priority)_
+- [x] `1` Verify the app in a browser (automated feature test) _(high priority)_
 
 ## Notes
 - schema.ts: user_profiles table holds role (admin/owner/viewer) + email + prefs, 1:1 via owner_user_id; first registrant auto-becomes admin in lib/roles.ts ensureProfile().
