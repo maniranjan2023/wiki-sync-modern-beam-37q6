@@ -9,7 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, Mail, Loader2, Sun } from 'lucide-react'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Users, Mail, Loader2, Sun, Trash2, TriangleAlert } from 'lucide-react'
 import type { Role, Profile } from '@/app/page'
 
 interface Member {
@@ -33,6 +37,7 @@ export default function SettingsSection({
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [savingPrefs, setSavingPrefs] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const loadMembers = useCallback(async () => {
     if (role !== 'admin') return
@@ -85,6 +90,21 @@ export default function SettingsSection({
       toast.error(err.message ?? 'Network error')
     } finally {
       setInviting(false)
+    }
+  }
+
+  async function resetWorkspace() {
+    setResetting(true)
+    try {
+      const res = await authFetch('/api/reset', { method: 'POST' })
+      const data = await res.json()
+      if (!data.success) { toast.error(data.error ?? 'Failed to reset workspace'); return }
+      toast.success('Workspace reset. Sources, wiki pages, findings, proposals and audit history were cleared.')
+      window.location.reload()
+    } catch (err: any) {
+      toast.error(err.message ?? 'Network error')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -198,6 +218,38 @@ export default function SettingsSection({
           <CardDescription className="text-xs">Use the light/dark toggle fixed at the top of the app.</CardDescription>
         </CardHeader>
       </Card>
+
+      {role === 'admin' && (
+        <Card className="border-destructive/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-destructive"><TriangleAlert className="h-4 w-4" /> Danger zone</CardTitle>
+            <CardDescription className="text-xs">Permanently clear all sources, wiki pages, sections, findings, proposals and audit history. Accounts, roles and preferences (members, your login, notification settings) are kept.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" disabled={resetting}>
+                  {resetting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />} Reset workspace data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset workspace data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This deletes every source, wiki page, section, version, finding, proposal and audit log entry for good. Member accounts and profiles are not touched. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={resetWorkspace} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Yes, delete everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
