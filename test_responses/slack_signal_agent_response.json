@@ -4,11 +4,11 @@
   "response": {
     "result": {
       "module_outputs": {},
-      "response": "I need a connected Slack account to list channels and fetch messages. Please connect the Slack integration for the workspace so I can scan the #acmepay channel for decision-bearing facts."
+      "response": "{\n  \"facts\": [],\n   \"status\": \"error\",\n   \"metadata\": {\n      \"agent_name\": \"Slack Signal Agent\",\n      \"timestamp\": \"2023-10-01T00:00:00Z\"\n   }\n}"
     },
     "status": "success"
   },
   "status": "passed",
   "test_input": "Scan these scoped channels for decision-bearing facts: [\"#acmepay\"].",
-  "timestamp": "2026-08-11T07:02:03.678719"
+  "timestamp": "2026-08-11T07:43:46.788714"
 }

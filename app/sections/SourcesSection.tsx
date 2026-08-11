@@ -82,6 +82,27 @@ interface DetectionResult {
   note?: string
 }
 
+// Classify a raw agent/tool error string into the specific diagnostic
+// categories requested for Sources UI + logs, instead of a generic opaque
+// message. Never invents a cause not present in the text.
+function classifySyncError(kind: string, raw: string): string {
+  const label = kind.charAt(0).toUpperCase() + kind.slice(1)
+  const lower = raw.toLowerCase()
+  if (lower.includes('no active connection') || lower.includes('no credentials found') || lower.includes('tool authentication required') || lower.includes('connect an account') || lower.includes('connect your') || lower.includes('connect a ') || lower.includes('i need access')) {
+    return `${label} API authentication failed — no connected account credential for this tool. ${raw}`.slice(0, 300)
+  }
+  if (lower.includes('channel') && (lower.includes('not found') || lower.includes('lookup'))) {
+    return `${label} channel lookup failed — ${raw}`.slice(0, 300)
+  }
+  if (lower.includes('repository') || lower.includes('repo') || lower.includes('readme')) {
+    return `${label} repository/content fetch failed — ${raw}`.slice(0, 300)
+  }
+  if (lower.includes('could not parse') || lower.includes('unexpected shape')) {
+    return `${label} signal extraction failed — ${raw}`.slice(0, 300)
+  }
+  return `${label} message fetch failed — ${raw}`.slice(0, 300)
+}
+
 function stripFences(raw: string): string {
   const trimmed = raw.trim()
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
@@ -262,10 +283,11 @@ export default function SourcesSection({
           const result = await callAIAgent(message, agentId)
           if (!result.success || result.response?.status !== 'success') {
             progress.sourcesFailed.push(src.kind)
+            const rawReason = result.response?.message ?? result.error ?? 'No response from signal agent'
             await authFetch('/api/source-sync', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: result.response?.message ?? result.error ?? 'Signal agent call failed' }),
+              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: classifySyncError(src.kind, String(rawReason)) }),
             })
             continue
           }
@@ -290,11 +312,11 @@ export default function SourcesSection({
           const hasFactsKey = parsed !== null && Array.isArray(parsed.facts)
           if (!parsed || parsed.status === 'error' || !hasFactsKey) {
             progress.sourcesFailed.push(src.kind)
-            const reason = (parsed && (parsed as any).message) || (parsed && !hasFactsKey ? (result.response.result as any)?.response : null) || 'Tool not connected or returned an unexpected response'
+            const rawReason = (parsed && (parsed as any).message) || (parsed && !hasFactsKey ? (result.response.result as any)?.response : null) || 'Tool returned an unexpected response with no facts'
             await authFetch('/api/source-sync', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: String(reason).slice(0, 300) }),
+              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: classifySyncError(src.kind, String(rawReason)) }),
             })
             continue
           }

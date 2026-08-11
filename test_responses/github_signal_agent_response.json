@@ -4,11 +4,11 @@
   "response": {
     "result": {
       "module_outputs": {},
-      "response": "{\"facts\":[],\"status\":\"error\",\"metadata\":{\"agent_name\":\"GitHub Signal Agent\",\"timestamp\":\"2026-08-11T12:00:00Z\"}}"
+      "response": "There was an error accessing the scoped repository 'maniranjan2023/acmepay-test'. No active connection exists for the GitHub toolkit. Please ensure that the GitHub account is connected successfully."
     },
     "status": "success"
   },
   "status": "passed",
   "test_input": "Scan these scoped repos for decision-bearing facts: [\"maniranjan2023/acmepay-test\"].",
-  "timestamp": "2026-08-11T07:05:14.420608"
+  "timestamp": "2026-08-11T07:43:37.012009"
 }
