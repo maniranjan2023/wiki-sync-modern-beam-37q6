@@ -13,7 +13,7 @@
  * control, proving the request genuinely came from the one configured
  * Slack app for this workspace — see slackVerify.ts.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { verifySlackSignature } from '@/lib/slackVerify'
 import { callAIAgentServer } from '@/lib/aiAgentServer'
 import { parseAnswer, VERIFIED_ANSWER_AGENT_ID } from '@/lib/wikiAnswerParser'
@@ -21,11 +21,17 @@ import { formatAnswerForSlack } from '@/lib/slackFormat'
 
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || ''
 
-// Simple in-memory sliding-window rate limit, keyed by team+user. This
-// process runs as a persistent Node server (next start), not a serverless
-// function per request, so a module-level Map survives across requests —
-// it resets on redeploy/restart, which is an accepted tradeoff for this
-// MVP scope (no existing app-wide rate limiter to reuse).
+// This route uses Node's `crypto` module (in lib/slackVerify.ts), which
+// requires the Node.js runtime rather than the Edge runtime.
+export const runtime = 'nodejs'
+
+// Simple in-memory sliding-window rate limit, keyed by team+user. NOTE: on
+// Netlify's serverless Next.js runtime, each invocation may run in a fresh
+// function instance, so this in-memory Map is a best-effort limiter (it
+// helps within a warm/reused instance) rather than a guaranteed global
+// limit. There is no existing app-wide rate limiter to reuse; a durable
+// cross-instance limit would require a shared store (e.g. the app's own
+// Postgres database), which is out of scope for this MVP.
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX_REQUESTS = 10
 const rateLimitLog = new Map<string, number[]>()
@@ -90,13 +96,20 @@ export async function POST(request: NextRequest) {
     return ephemeral('Something went wrong reaching Slack — please try again.')
   }
 
-  // Fire the agent call + response_url callback in the background AFTER we
-  // return the immediate ack below. This process is a persistent Node
-  // server (not a serverless function), so continuing work after the
-  // response is sent is safe here without any special runtime primitive.
-  processAskWiki({ text, team_id, user_id, channel_id, response_url, startedAt }).catch((err) => {
-    logEvent('slack_ask_wiki_failed', { team_id, user_id, channel_id, reason: 'unhandled_exception', latency_ms: Date.now() - startedAt })
-  })
+  // Fire the agent call + response_url callback via Next.js's after(), which
+  // is the platform primitive that keeps a serverless invocation (this app
+  // deploys on Netlify via @netlify/plugin-nextjs) alive long enough to
+  // finish background work AFTER the response has been sent. A plain
+  // `.catch()`-only fire-and-forget call is NOT safe here: a serverless
+  // function can be frozen/torn down the instant the response flushes,
+  // which is exactly what produced the earlier "operation_timeout" /
+  // "app did not respond" failures — the agent call and response_url POST
+  // were being killed mid-flight before they could complete.
+  after(() =>
+    processAskWiki({ text, team_id, user_id, channel_id, response_url, startedAt }).catch(() => {
+      logEvent('slack_ask_wiki_failed', { team_id, user_id, channel_id, reason: 'unhandled_exception', latency_ms: Date.now() - startedAt })
+    })
+  )
 
   // Immediate ack — well under Slack's 3s window. Never wait for the agent here.
   return ephemeral('Checking the verified wiki…')
