@@ -6,7 +6,7 @@
  */
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { AuthProvider, ProtectedRoute, LoginForm, RegisterForm, UserMenu, useAuth } from 'lyzr-architect-pg/client'
 import { Toaster, toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +22,7 @@ import ReviewQueueSection from '@/app/sections/ReviewQueueSection'
 import AskSection from '@/app/sections/AskSection'
 import AuditLogSection from '@/app/sections/AuditLogSection'
 import SettingsSection from '@/app/sections/SettingsSection'
+import { syncPageToWikiKB } from '@/lib/syncWikiKb'
 
 export type Role = 'admin' | 'owner' | 'viewer'
 export type ScreenKey = 'sources' | 'wiki' | 'review' | 'ask' | 'audit' | 'settings'
@@ -187,6 +188,31 @@ function Dashboard() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [authFetch, profile, refreshKey])
+
+  // Backfill: any verified page created/edited before per-save KB syncing was
+  // wired in (or whose train call silently failed) never reaches the
+  // Verified Answer Agent's knowledge base, so Ask reports "not documented"
+  // even though the page exists. Reconciling once per load, independent of
+  // any edit, is the only way to guarantee Ask can see everything that is
+  // actually marked verified — not just content touched after this fix.
+  const kbBackfillDone = useRef(false)
+  useEffect(() => {
+    if (!profile || kbBackfillDone.current) return
+    kbBackfillDone.current = true
+    let cancelled = false
+    authFetch('/api/pages')
+      .then((r) => r.json())
+      .then(async (d) => {
+        if (cancelled || !d.success || !Array.isArray(d.data)) return
+        const verifiedPages = d.data.filter((p: any) => p?.status === 'verified')
+        for (const p of verifiedPages) {
+          if (cancelled) break
+          await syncPageToWikiKB(p.title, p.body_md, p.slug)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [authFetch, profile])
 
   if (loadingProfile || !profile) {
     return (
