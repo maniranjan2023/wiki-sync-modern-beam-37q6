@@ -12,50 +12,12 @@ import {
   Send, Loader2, MessageCircleQuestion, Radio, User, Quote, ChevronDown, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { callAIAgent } from '@/lib/aiAgent'
-
-const VERIFIED_ANSWER_AGENT_ID = '6a7a22aacb71768e58329008'
+import { parseAnswer, VERIFIED_ANSWER_AGENT_ID } from '@/lib/wikiAnswerParser'
 
 function formatInline(text: string) {
   const parts = text.split(/\*\*(.*?)\*\*/g)
   if (parts.length === 1) return text
   return parts.map((part, i) => (i % 2 === 1 ? <strong key={i} className="font-semibold text-foreground">{part}</strong> : part))
-}
-
-interface ParsedAnswer {
-  answer: string
-  detail: string[]
-  sources: string[]
-  caution: string | null
-}
-
-// Parses the Verified Answer Agent's fixed Markdown contract:
-// **Answer** / **Detail** (optional) / **Sources** / **Caution** (optional).
-// Falls back to treating the whole reply as the answer if the shape doesn't
-// match, so an off-contract response still renders instead of vanishing.
-function parseAnswer(raw: string): ParsedAnswer {
-  const sectionRe = /\*\*(Answer|Detail|Sources|Caution)\*\*/gi
-  const matches = [...raw.matchAll(sectionRe)]
-  if (matches.length === 0) {
-    return { answer: raw.trim(), detail: [], sources: [], caution: null }
-  }
-  const sections: Record<string, string> = {}
-  for (let i = 0; i < matches.length; i++) {
-    const name = matches[i][1].toLowerCase()
-    const start = (matches[i].index ?? 0) + matches[i][0].length
-    const end = i + 1 < matches.length ? matches[i + 1].index : raw.length
-    sections[name] = raw.slice(start, end).trim()
-  }
-  const toLines = (s?: string) =>
-    (s ?? '')
-      .split('\n')
-      .map((l) => l.replace(/^[-*]\s*/, '').trim())
-      .filter(Boolean)
-  return {
-    answer: sections.answer ?? raw.trim(),
-    detail: toLines(sections.detail),
-    sources: toLines(sections.sources),
-    caution: sections.caution?.trim() || null,
-  }
 }
 
 interface Message { id: string; role: 'user' | 'assistant'; text: string }
