@@ -85,17 +85,25 @@ function CitationToggle({ sources }: { sources: string[] }) {
       {open && (
         <div className="mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
           {sources.map((s, i) => {
-            // Split "Page › Heading — "verified <date>"" so the quoted part
-            // can be styled distinctly with real inverted commas.
-            const quoteMatch = s.match(/^(.*?)[\s—-]*"([^"]+)"\s*$/)
-            const label = quoteMatch ? quoteMatch[1].trim().replace(/[—-]\s*$/, '') : s
-            const quote = quoteMatch ? quoteMatch[2] : null
+            // Agent citation lines look like:
+            //   Page Title › Section Heading ([/wiki/slug](/wiki/slug)) — "verified <date>"
+            // The quoted snippet can appear anywhere in the line (not just at
+            // the end, once a markdown link sits in between), so extract it
+            // first, then strip the markdown link syntax from what remains
+            // for a clean label instead of showing raw "([...](...))".
+            const quoteMatch = s.match(/[“"]([^”"]+)[”"]/)
+            const quote = quoteMatch ? quoteMatch[1].trim() : null
+            const withoutQuote = quoteMatch ? (s.slice(0, quoteMatch.index) + s.slice((quoteMatch.index ?? 0) + quoteMatch[0].length)) : s
+            const label = withoutQuote
+              .replace(/\[([^\]]*)\]\(([^)]*)\)/g, '$1') // [text](url) -> text
+              .replace(/[—-]\s*$/, '')
+              .trim()
             return (
               <div key={i} className="flex items-start gap-2 rounded-md bg-background border border-border px-2.5 py-2 text-xs">
                 <Quote className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  {label && <div className="font-medium text-foreground truncate">{label}</div>}
-                  {quote && <div className="text-muted-foreground italic mt-0.5">&ldquo;{quote}&rdquo;</div>}
+                  {label && <div className="font-medium text-foreground break-words">{label}</div>}
+                  {quote && <div className="text-muted-foreground italic mt-0.5 break-words">&ldquo;{quote}&rdquo;</div>}
                 </div>
               </div>
             )
