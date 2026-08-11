@@ -154,6 +154,23 @@ export default function SourcesSection({
 
   const displaySources: SourceRow[] = sampleMode && sources.length === 0 ? SAMPLE_SOURCES : sources
 
+  // Connectors that are marked Connected in this app's own DB but whose
+  // most recent sync attempt failed — almost always because the underlying
+  // tool has no OAuth credential connected in Studio yet. Surfaced here as
+  // a persistent, explicit notification rather than requiring you to open
+  // each card individually.
+  const needsManualReconnect = CONNECTOR_DEFS
+    .map((def) => {
+      const existing = displaySources.find((s) => s.kind === def.kind)
+      if (!existing || existing.status !== 'connected') return null
+      const latestCursor = existing.cursors && existing.cursors.length > 0
+        ? existing.cursors.reduce((a, b) => (new Date(a.last_run_at ?? 0) > new Date(b.last_run_at ?? 0) ? a : b))
+        : null
+      if (!latestCursor?.last_status?.startsWith('error')) return null
+      return { label: def.label, error: latestCursor.last_status.replace(/^error:\s*/, '') }
+    })
+    .filter((v): v is { label: string; error: string } => v !== null)
+
   async function connect(kind: string) {
     if (!isAdmin) return
     const def = CONNECTOR_DEFS.find((c) => c.kind === kind)
@@ -520,6 +537,25 @@ export default function SourcesSection({
         <div className="rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>Last scan queued <strong>{lastScanSummary.proposals}</strong> proposal(s){lastScanSummary.conflicts > 0 ? ` and flagged ${lastScanSummary.conflicts} conflict(s)` : ''}. Review them in the Review Queue.</span>
+        </div>
+      )}
+
+      {needsManualReconnect.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3.5 py-3 text-sm space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{needsManualReconnect.length} connector{needsManualReconnect.length === 1 ? '' : 's'} need{needsManualReconnect.length === 1 ? 's' : ''} manual reconnection</span>
+          </div>
+          <ul className="space-y-1 text-xs text-muted-foreground pl-6 list-disc">
+            {needsManualReconnect.map((c) => (
+              <li key={c.label}><span className="font-medium text-foreground">{c.label}</span>: {c.error}</li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground pl-6">
+            {isAdmin
+              ? 'These connectors are marked Connected here, but their sync failed because no account credential is authorized yet. This must be connected manually in Lyzr Studio, on each affected agent\u2019s tool configuration \u2014 reconnecting here on the Sources page only re-checks status, it does not grant access.'
+              : 'Ask an admin to reconnect these tools in Lyzr Studio before the next drift scan.'}
+          </p>
         </div>
       )}
 
