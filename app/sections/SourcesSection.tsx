@@ -311,7 +311,12 @@ export default function SourcesSection({
           let parsed: { facts?: SignalFact[]; status?: string; message?: string } | null = null
           try {
             const raw = result.response.result as any
-            parsed = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : (raw as { facts?: SignalFact[]; status?: string; message?: string })
+            // Several Signal Agents run in text mode even though their contract is
+            // strict JSON — /api/agent then wraps their reply as { text: "<json>" }
+            // instead of a bare string. Unwrap that shape before giving up, or a
+            // fully-successful signal run gets misreported as a parse failure.
+            const rawText = typeof raw === 'string' ? raw : (typeof raw?.text === 'string' ? raw.text : null)
+            parsed = rawText !== null ? JSON.parse(stripFences(rawText)) : (raw as { facts?: SignalFact[]; status?: string; message?: string })
           } catch {
             progress.sourcesFailed.push(src.kind)
             await authFetch('/api/source-sync', {
@@ -397,7 +402,11 @@ export default function SourcesSection({
             if (!result.success || result.response?.status !== 'success') continue
             const raw = result.response.result as any
             const detection: DetectionResult = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : raw
-            if (detection && detection.drift && detection.confidence >= 0.6) {
+            // Defense-in-depth: "confirmation" means the source AGREES with the
+            // wiki claim — it is never actionable drift, regardless of what the
+            // agent returned. Also guard the documented confidence floor.
+            const isRealDrift = detection && detection.drift === true && detection.kind !== 'confirmation' && detection.confidence >= 0.6
+            if (isRealDrift) {
               findings.push({ section, source: src, detection })
             }
           } catch {
@@ -463,10 +472,16 @@ export default function SourcesSection({
           if (!result.success || result.response?.status !== 'success') continue
           const raw = result.response.result as any
           const draft = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : raw
+          const proposedMd = draft.proposed_md ?? w.section.body_md
+          const currentMd = draft.current_md ?? w.section.body_md
+          // A proposal whose text is identical to what's already in the wiki is
+          // pure noise for the review queue — there is nothing for a human to act
+          // on. Skip it rather than surfacing a no-op card.
+          if (!draft.needs_human_input && proposedMd.trim() === currentMd.trim()) continue
           proposals.push({
             section_id: w.section.id,
-            current_md: draft.current_md ?? w.section.body_md,
-            proposed_md: draft.proposed_md ?? w.section.body_md,
+            current_md: currentMd,
+            proposed_md: proposedMd,
             rationale: draft.rationale ?? w.detection.note ?? 'Drift detected',
             needs_human_input: !!draft.needs_human_input,
             question: draft.question ?? null,

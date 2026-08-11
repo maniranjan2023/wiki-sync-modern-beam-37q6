@@ -50,8 +50,7 @@
           "enum": [
             "contradiction",
             "staleness",
-            "gap",
-            "confirmation"
+            "gap"
           ],
           "type": "string"
         },

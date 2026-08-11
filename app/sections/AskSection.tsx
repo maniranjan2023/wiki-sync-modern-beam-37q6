@@ -78,9 +78,19 @@ export default function AskSection({
         setMessages((prev) => [...prev, { id: `a_${Date.now()}`, role: 'assistant', text: '_Sorry — I could not produce a verified answer right now._' }])
         return
       }
-      const md = (result.response.result as any)?.markdown_response
-      if (typeof md !== 'string' || !md.trim()) {
-        toast.error('Missing markdown_response in the agent contract')
+      // The Verified Answer Agent replies in plain Markdown text (response_format
+      // "text", never JSON). /api/agent's normalizeResponse wraps a plain string
+      // as { text: <string> } — it never produces a markdown_response key. Read
+      // every shape this agent could legitimately arrive in before giving up.
+      const resultObj = result.response.result as any
+      const md =
+        typeof resultObj?.text === 'string' ? resultObj.text
+        : typeof resultObj?.markdown_response === 'string' ? resultObj.markdown_response
+        : typeof resultObj?.message === 'string' ? resultObj.message
+        : typeof resultObj === 'string' ? resultObj
+        : null
+      if (!md || !md.trim()) {
+        toast.error('Verified Answer Agent returned an empty response')
         return
       }
       setMessages((prev) => [...prev, { id: `a_${Date.now()}`, role: 'assistant', text: md }])
