@@ -149,10 +149,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Direct upload and train in one step
+      // Direct upload and train in one step.
+      // IMPORTANT: "llmsherpa" is a layout-aware parser tuned for PDFs with
+      // real page/paragraph structure. Fed a plain .txt file it silently
+      // returns document_count: 0 — HTTP 200, "success", but ZERO retrievable
+      // chunks land in the KB. "simple" is the correct parser for txt/plain
+      // prose and reliably yields document_count >= 1. Verified directly
+      // against the live Lyzr RAG API before this fix landed.
+      const dataParser = fileType === "txt" ? "simple" : "llmsherpa";
       const trainFormData = new FormData();
       trainFormData.append("file", file, file.name);
-      trainFormData.append("data_parser", "llmsherpa");
+      trainFormData.append("data_parser", dataParser);
       trainFormData.append("chunk_size", "1000");
       trainFormData.append("chunk_overlap", "100");
       trainFormData.append("extra_info", "{}");
@@ -184,13 +191,32 @@ export async function POST(request: NextRequest) {
       }
 
       const trainData = await trainResponse.json();
+      const documentCount = trainData.document_count ?? trainData.chunks ?? 0;
+
+      // The Lyzr API returns HTTP 200 + "success" message even when it parsed
+      // zero chunks (e.g. wrong parser for the content type, or genuinely
+      // empty content). Treating that as success here is exactly how the
+      // Verified Wiki KB silently ended up empty despite every prior sync
+      // call reporting success. Surface it as a real failure instead.
+      if (documentCount === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Document trained but produced 0 retrievable chunks — content may be empty or an unsupported layout for this parser.",
+            fileName: file.name,
+            fileType,
+            ragId,
+          },
+          { status: 422 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
         message: "Document uploaded and trained successfully",
         fileName: file.name,
         fileType,
-        documentCount: trainData.document_count || trainData.chunks || 1,
+        documentCount,
         ragId,
         timestamp: new Date().toISOString(),
       });
