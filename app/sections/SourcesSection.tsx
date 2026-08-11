@@ -18,6 +18,20 @@ import { callAIAgent } from '@/lib/aiAgent'
 import type { Role } from '@/app/page'
 
 const DRIFT_SCAN_COORDINATOR_ID = '6a7a22c3cb71768e5832900a'
+const SIGNAL_AGENT_IDS: Record<string, string> = {
+  slack: '6a7a225479361ed888c5ef2a',
+  drive: '6a7a2254fd0aefe8da8c6921',
+  github: '6a7a22545a2d7a3a966e1d43',
+  jira: '6a7a2254cb71768e58329006',
+  linear: '6a7a22546ada253b4e709d3d',
+}
+const DRIFT_DETECTION_AGENT_ID = '6a7a22895a2d7a3a966e1d45'
+const PROPOSAL_DRAFTER_AGENT_ID = '6a7a2289680f2f9bfa6250f8'
+const SCOPE_NOUN: Record<string, string> = {
+  slack: 'channels', drive: 'folders', github: 'repos', jira: 'projects', linear: 'teams',
+}
+// Formal, written-record sources outrank informal chat when authority_rank ties.
+const FORMAL_SOURCE_KINDS = new Set(['drive', 'github', 'jira', 'linear'])
 
 const CONNECTOR_DEFS = [
   { kind: 'slack', label: 'Slack', icon: Slack, placeholder: '#channel-name' },
@@ -55,6 +69,17 @@ interface DriftScanResult {
   conflicts: DriftScanConflict[]
   status: 'success' | 'error'
   metadata?: { agent_name?: string; findings_count?: number; proposals_count?: number; sections_scanned?: number; timestamp?: string }
+}
+
+interface SignalFact { event_id: string; timestamp: string; author: string; text: string; url: string; scope: string }
+interface DetectionResult {
+  section_id: string
+  drift: boolean
+  kind?: 'contradiction' | 'staleness' | 'gap' | 'confirmation' | null
+  confidence: number
+  claim?: string
+  evidence?: { event_id: string; quote: string; url: string; timestamp: string; author: string }[]
+  note?: string
 }
 
 function stripFences(raw: string): string {
@@ -196,7 +221,9 @@ export default function SourcesSection({
     if (role === 'viewer') return
     setScanning(true)
     setActiveAgentId(DRIFT_SCAN_COORDINATOR_ID)
+    const progress = { synced: 0, sourcesFailed: [] as string[] }
     try {
+      // STAGE 0 — load wiki sections to compare against.
       const sectionsRes = await authFetch('/api/pages')
       const pagesData = await sectionsRes.json()
       const pageList = pagesData.success && Array.isArray(pagesData.data) ? pagesData.data : []
@@ -208,43 +235,198 @@ export default function SourcesSection({
       for (const p of pageList) {
         const sRes = await authFetch(`/api/page-sections?page_id=${p.id}`)
         const sData = await sRes.json()
-        if (sData.success) sectionsAll.push(...(sData.data ?? []).map((s: any) => ({ ...s, page_title: p.title, page_status: p.status })))
+        if (sData.success) sectionsAll.push(...(sData.data ?? []).map((s: any) => ({ ...s, page_title: p.title, page_status: p.status, page_owner: p.owner_user_id })))
       }
-      const connectedSources = sources.filter((s) => s.status === 'connected')
-      const message = `Run a drift scan. Connected sources and scopes: ${JSON.stringify(
-        connectedSources.map((s) => ({ id: s.id, kind: s.kind, scopes: s.scopes, authority_rank: s.authority_rank }))
-      )}. Wiki page_sections to compare against: ${JSON.stringify(
-        sectionsAll.map((s) => ({ section_id: s.id, page_title: s.page_title, heading: s.heading, body_md: s.body_md }))
-      )}. Return findings and drafted proposals per the response contract.`
-
-      const result = await callAIAgent(message, DRIFT_SCAN_COORDINATOR_ID)
-      if (!result.success || result.response?.status !== 'success') {
-        toast.error(result.response?.message ?? 'Drift scan failed')
-        return
-      }
-      let parsed: DriftScanResult | null = null
-      try {
-        const raw = result.response.result as any
-        parsed = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : (raw as DriftScanResult)
-      } catch {
-        toast.error('Could not parse the coordinator response')
-        return
-      }
-      if (!parsed || !Array.isArray(parsed.proposals)) {
-        toast.error('Coordinator returned an unexpected shape')
+      if (sectionsAll.length === 0) {
+        toast.error('No wiki sections found to compare against.')
         return
       }
 
+      const connectedSources = sources.filter((s) => s.status === 'connected' && (s.scopes ?? []).length > 0)
+      if (connectedSources.length === 0) {
+        toast.error('Connect at least one source and add a scope (channel/folder/repo/project) before scanning.')
+        return
+      }
+
+      // STAGE 1+2 — fan out to each connected source's own Signal Agent with its
+      // configured scopes, then persist every returned fact via /api/source-sync
+      // (idempotent — dedup by event_uid). This is the step that was previously
+      // missing entirely, which is why events_ingested always read 0.
+      const factsBySource: Record<string, SignalFact[]> = {}
+      for (const src of connectedSources) {
+        const agentId = SIGNAL_AGENT_IDS[src.kind]
+        if (!agentId) continue
+        const noun = SCOPE_NOUN[src.kind] ?? 'scopes'
+        const message = `Scan these scoped ${noun} for decision-bearing facts: ${JSON.stringify(src.scopes)}.`
+        try {
+          const result = await callAIAgent(message, agentId)
+          if (!result.success || result.response?.status !== 'success') {
+            progress.sourcesFailed.push(src.kind)
+            await authFetch('/api/source-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: result.response?.message ?? result.error ?? 'Signal agent call failed' }),
+            })
+            continue
+          }
+          let parsed: { facts?: SignalFact[] } | null = null
+          try {
+            const raw = result.response.result as any
+            parsed = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : (raw as { facts?: SignalFact[] })
+          } catch {
+            progress.sourcesFailed.push(src.kind)
+            await authFetch('/api/source-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: 'Could not parse signal agent response' }),
+            })
+            continue
+          }
+          const facts = Array.isArray(parsed?.facts) ? parsed!.facts! : []
+          factsBySource[src.id] = facts
+          const syncRes = await authFetch('/api/source-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_id: src.id, facts }),
+          })
+          const syncData = await syncRes.json()
+          if (syncData.success) progress.synced += syncData.data.persisted ?? 0
+        } catch (err: any) {
+          progress.sourcesFailed.push(src.kind)
+          await authFetch('/api/source-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: err.message ?? 'Network error during sync' }),
+          })
+        }
+      }
+      await load() // refresh events_ingested counts now that sync has persisted rows
+
+      const allFacts = Object.values(factsBySource).flat()
+      if (allFacts.length === 0) {
+        toast.error(
+          progress.sourcesFailed.length > 0
+            ? `No facts ingested — sync failed for: ${progress.sourcesFailed.join(', ')}. Check Sources for error status.`
+            : 'No decision-bearing facts found in the configured scopes yet.'
+        )
+        return
+      }
+
+      // STAGE 3 — detect drift once per (section, source) pair using the
+      // just-persisted facts, exactly as the Drift Detection Agent contract
+      // requires (one source per invocation, confidence >= 0.6 to report).
+      const findings: { section: any; source: SourceRow; detection: DetectionResult }[] = []
+      for (const section of sectionsAll) {
+        for (const src of connectedSources) {
+          const events = factsBySource[src.id]
+          if (!events || events.length === 0) continue
+          const message = JSON.stringify({
+            section: { heading: section.heading, body: section.body_md, last_verified_at: section.last_verified_at ?? null, owner: section.page_owner ?? null },
+            events,
+            scope: src.scopes,
+          })
+          try {
+            const result = await callAIAgent(`Compare this section against these source events:\n${message}`, DRIFT_DETECTION_AGENT_ID)
+            if (!result.success || result.response?.status !== 'success') continue
+            const raw = result.response.result as any
+            const detection: DetectionResult = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : raw
+            if (detection && detection.drift && detection.confidence >= 0.6) {
+              findings.push({ section, source: src, detection })
+            }
+          } catch {
+            // one section/source pair failing does not fail the whole scan
+          }
+        }
+      }
+      console.log(`[drift-scan-client] sections_scanned=${sectionsAll.length} findings_count=${findings.length}`)
+
+      if (findings.length === 0) {
+        toast.success(`Sync complete — ${progress.synced} new event(s) ingested. No drift detected against current wiki content.`)
+        return
+      }
+
+      // STAGE 4 — resolve multi-source conflicts per section using authority_rank,
+      // then recency, then formal-record-beats-chat, exactly as the Coordinator's
+      // own documented conflict rules specify. Unresolvable ties become a
+      // needs_human_input conflict card instead of a guessed proposal.
+      const bySection = new Map<string, typeof findings>()
+      for (const f of findings) {
+        const arr = bySection.get(f.section.id) ?? []
+        arr.push(f)
+        bySection.set(f.section.id, arr)
+      }
+
+      const winners: typeof findings = []
+      const conflicts: DriftScanConflict[] = []
+      for (const [sectionId, group] of bySection) {
+        if (group.length === 1) { winners.push(group[0]); continue }
+        const maxRank = Math.max(...group.map((g) => g.source.authority_rank))
+        const topRank = group.filter((g) => g.source.authority_rank === maxRank)
+        if (topRank.length === 1) { winners.push(topRank[0]); continue }
+        const formal = topRank.filter((g) => FORMAL_SOURCE_KINDS.has(g.source.kind))
+        const pool = formal.length > 0 ? formal : topRank
+        if (pool.length === 1) { winners.push(pool[0]); continue }
+        const newest = pool.slice().sort((a, b) => {
+          const ta = new Date(a.detection.evidence?.[0]?.timestamp ?? 0).getTime()
+          const tb = new Date(b.detection.evidence?.[0]?.timestamp ?? 0).getTime()
+          return tb - ta
+        })
+        if (newest.length > 0 && !Number.isNaN(new Date(newest[0].detection.evidence?.[0]?.timestamp ?? '').getTime())) {
+          winners.push(newest[0])
+        } else {
+          conflicts.push({
+            section_id: sectionId,
+            reason: `${group.length} sources disagree at equal authority rank (${maxRank}) with no clear recency signal — owner arbitration required.`,
+            conflicting_sources: group.map((g) => g.source.kind),
+          })
+        }
+      }
+
+      // STAGE 5 — draft a minimal redline for each winning finding.
+      const proposals: DriftScanProposal[] = []
+      for (const w of winners) {
+        const primaryEvidence = w.detection.evidence?.[0]
+        const message = JSON.stringify({
+          section: { heading: w.section.heading, body: w.section.body_md },
+          finding: { claim: w.detection.claim, kind: w.detection.kind, evidence: w.detection.evidence ?? [] },
+          style: 'match the existing wiki voice',
+        })
+        try {
+          const result = await callAIAgent(`Draft a minimal redline for this finding:\n${message}`, PROPOSAL_DRAFTER_AGENT_ID)
+          if (!result.success || result.response?.status !== 'success') continue
+          const raw = result.response.result as any
+          const draft = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : raw
+          proposals.push({
+            section_id: w.section.id,
+            current_md: draft.current_md ?? w.section.body_md,
+            proposed_md: draft.proposed_md ?? w.section.body_md,
+            rationale: draft.rationale ?? w.detection.note ?? 'Drift detected',
+            needs_human_input: !!draft.needs_human_input,
+            question: draft.question ?? null,
+            citation: draft.citation ?? (primaryEvidence ? { source_kind: w.source.kind, url: primaryEvidence.url, snippet: primaryEvidence.quote, timestamp: primaryEvidence.timestamp } : undefined),
+          })
+        } catch {
+          // one drafting failure does not fail the whole scan
+        }
+      }
+
+      if (proposals.length === 0 && conflicts.length === 0) {
+        toast.success(`Sync complete — ${progress.synced} new event(s) ingested. Findings detected but drafting produced nothing to review.`)
+        return
+      }
+
+      // STAGE 6 — persist exactly as before (unchanged, deterministic DB write).
+      const scanId = `scan_${Date.now()}`
       const persistRes = await authFetch('/api/drift-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scan_id: parsed.scan_id, proposals: parsed.proposals, conflicts: parsed.conflicts ?? [] }),
+        body: JSON.stringify({ scan_id: scanId, proposals, conflicts }),
       })
       const persistData = await persistRes.json()
       if (!persistData.success) { toast.error(persistData.error ?? 'Failed to persist scan results'); return }
 
-      setLastScanSummary({ proposals: persistData.data.created_proposals, conflicts: (parsed.conflicts ?? []).length })
-      toast.success(`Drift scan complete — ${persistData.data.created_proposals} proposal(s) queued for review`)
+      setLastScanSummary({ proposals: persistData.data.created_proposals, conflicts: conflicts.length })
+      toast.success(`Drift scan complete — ${progress.synced} event(s) ingested, ${persistData.data.created_proposals} proposal(s) queued for review${conflicts.length > 0 ? `, ${conflicts.length} conflict(s) need arbitration` : ''}`)
       onChanged()
     } catch (err: any) {
       toast.error(err.message ?? 'Drift scan failed — you can retry without losing prior proposals')

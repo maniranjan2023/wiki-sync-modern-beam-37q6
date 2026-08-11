@@ -26,6 +26,7 @@ export const POST = authMiddleware(async (req: any) => {
     const scanId: string = body.scan_id ?? `scan_${Date.now()}`;
     const rawProposals: any[] = Array.isArray(body.proposals) ? body.proposals : [];
     const rawConflicts: any[] = Array.isArray(body.conflicts) ? body.conflicts : [];
+    console.log(`[drift-scan] input scan_id=${scanId} proposals=${rawProposals.length} conflicts=${rawConflicts.length}`);
 
     const db = getDb();
     let createdFindings = 0;
@@ -162,6 +163,10 @@ export const POST = authMiddleware(async (req: any) => {
       action: "drift_scan_completed",
       detail: { created_findings: createdFindings, created_proposals: createdProposals, merged_findings: mergedFindings, superseded_proposals: supersededProposals },
     } as any);
+
+    console.log(
+      `[drift-scan] output scan_id=${scanId} findings_created=${createdFindings} findings_merged=${mergedFindings} proposals_created=${createdProposals} proposals_superseded=${supersededProposals}`
+    );
 
     return NextResponse.json({
       success: true,
