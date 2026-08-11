@@ -41,13 +41,24 @@
       "agent_role": "You are the GitHub Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped GitHub repositories for merged PRs, commits, and doc changes that may indicate drift against wiki page sections.",
       "created_at": "2026-08-10T19:11:16.425579",
       "description": "Reads merged PRs, commit messages and docs changes in scoped repos to extract decision-bearing facts.",
-      "features": [],
+      "features": [
+        {
+          "config": {
+            "module_mode": "Post"
+          },
+          "priority": 0,
+          "type": "SINGLE_TOOL_CALL"
+        }
+      ],
       "has_knowledge_base": false,
       "has_memory": false,
       "managed_agents": [],
-      "model": "groq/openai/gpt-oss-120b",
+      "model": "gpt-4o-mini",
       "name": "GitHub Signal Agent",
-      "provider_id": "Groq",
+      "provider_id": "OpenAI",
+      "response_format": {
+        "type": "json_object"
+      },
       "temperature": 0.2,
       "tool_configs": [
         {
@@ -65,6 +76,7 @@
         }
       ],
       "top_p": 1,
+      "updated_at": "2026-08-11T07:43:20.184597",
       "workflow_node_id": "github_signal"
     },
     {
@@ -75,13 +87,24 @@
       "agent_role": "You are the Slack Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Slack channels for decision-bearing statements that may indicate drift against wiki page sections.",
       "created_at": "2026-08-10T19:11:16.432776",
       "description": "Pulls recent messages from scoped Slack channels and summarises decision-bearing statements as structured facts.",
-      "features": [],
+      "features": [
+        {
+          "config": {
+            "module_mode": "Post"
+          },
+          "priority": 0,
+          "type": "SINGLE_TOOL_CALL"
+        }
+      ],
       "has_knowledge_base": false,
       "has_memory": false,
       "managed_agents": [],
-      "model": "groq/openai/gpt-oss-120b",
+      "model": "gpt-4o-mini",
       "name": "Slack Signal Agent",
-      "provider_id": "Groq",
+      "provider_id": "OpenAI",
+      "response_format": {
+        "type": "json_object"
+      },
       "temperature": 0.2,
       "tool_configs": [
         {
@@ -98,6 +121,7 @@
         }
       ],
       "top_p": 1,
+      "updated_at": "2026-08-11T07:43:20.136679",
       "workflow_node_id": "slack_signal"
     },
     {
@@ -108,13 +132,24 @@
       "agent_role": "You are the Jira Signal Agent for Truewiki, a self-maintaining knowledge base system. You scan scoped Jira projects for issue, status, and description changes that may indicate drift against wiki page sections.",
       "created_at": "2026-08-10T19:11:16.458682",
       "description": "Reads issue, status and description changes in scoped Jira projects to extract decision-bearing facts.",
-      "features": [],
+      "features": [
+        {
+          "config": {
+            "module_mode": "Post"
+          },
+          "priority": 0,
+          "type": "SINGLE_TOOL_CALL"
+        }
+      ],
       "has_knowledge_base": false,
       "has_memory": false,
       "managed_agents": [],
-      "model": "groq/openai/gpt-oss-120b",
+      "model": "gpt-4o-mini",
       "name": "Jira Signal Agent",
-      "provider_id": "Groq",
+      "provider_id": "OpenAI",
+      "response_format": {
+        "type": "json_object"
+      },
       "temperature": 0.2,
       "tool_configs": [
         {
@@ -131,6 +166,7 @@
         }
       ],
       "top_p": 1,
+      "updated_at": "2026-08-11T07:43:20.169249",
       "workflow_node_id": "jira_signal"
     },
     {
@@ -1209,7 +1245,7 @@
     },
     "status": "ready"
   },
-  "last_updated": "2026-08-10T19:15:17.204293",
+  "last_updated": "2026-08-11T07:43:20.1846",
   "summary": {
     "total_agents": 11,
     "total_knowledge_bases": 1,
