@@ -14,6 +14,7 @@ import {
   Check, Pencil, X, Bell, ExternalLink, AlertTriangle, Loader2, Radio, ListChecks, ScaleIcon,
 } from 'lucide-react'
 import { callAIAgent } from '@/lib/aiAgent'
+import { syncPageToWikiKB } from '@/lib/syncWikiKb'
 import type { Role } from '@/app/page'
 
 const REVIEW_NOTIFIER_ID = '6a7a228943595b3ec5c771fe'
@@ -161,6 +162,11 @@ export default function ReviewQueueSection({
     if (ids.some((id) => id.startsWith('sample-'))) { toast.error('Turn off Sample Data to act on real proposals'); return }
     if (ids.length === 0) return
     setBusy(true)
+    // Capture page_ids BEFORE the action mutates state, so we know which
+    // pages need their content re-pushed to the Verified Wiki KB.
+    const touchedPageIds = Array.from(new Set(
+      displayProposals.filter((p) => ids.includes(p.id)).map((p) => p.page_id)
+    ))
     try {
       const res = await authFetch('/api/proposals', {
         method: 'POST',
@@ -173,6 +179,19 @@ export default function ReviewQueueSection({
       toast.success(`${verb} ${ids.length} proposal(s)`)
       setSelectedIds(new Set())
       setEditing(false)
+      // Approving/editing rewrites the page's verified body_md server-side —
+      // push each touched page's fresh content into the Verified Wiki KB so
+      // Ask reflects it immediately, instead of only the stale prior version.
+      if (action !== 'reject' && touchedPageIds.length > 0) {
+        try {
+          const pagesRes = await authFetch('/api/pages')
+          const pagesData = await pagesRes.json()
+          if (pagesData.success) {
+            const touched = (pagesData.data ?? []).filter((p: any) => touchedPageIds.includes(p.id) && p.status === 'verified')
+            for (const p of touched) syncPageToWikiKB(p.title, p.body_md, p.slug)
+          }
+        } catch { /* KB sync is best-effort */ }
+      }
       await load()
       onChanged()
     } catch (err: any) {

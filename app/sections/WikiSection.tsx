@@ -14,9 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  FileText, Upload, History, CheckCircle2, AlertTriangle, Clock, Loader2, Save, Radio, User, ChevronDown, RefreshCw,
+  FileText, Upload, History, CheckCircle2, AlertTriangle, Clock, Loader2, Save, Radio, User, ChevronDown, RefreshCw, DatabaseZap,
 } from 'lucide-react'
 import { callAIAgent } from '@/lib/aiAgent'
+import { syncPageToWikiKB } from '@/lib/syncWikiKb'
 import type { Role } from '@/app/page'
 
 const WIKI_IMPORT_AGENT_ID = '6a7a228915c60742623cc095'
@@ -101,6 +102,7 @@ export default function WikiSection({
   const [cadence, setCadence] = useState('weekly')
   const [versions, setVersions] = useState<VersionRow[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [syncingKb, setSyncingKb] = useState(false)
 
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
@@ -199,6 +201,11 @@ export default function WikiSection({
       const data = await res.json()
       if (!data.success) { toast.error(data.error ?? 'Failed to save'); return }
       toast.success('Page saved and versioned')
+      // Keep the Verified Wiki KB in sync so Ask can retrieve the new content —
+      // saving to Postgres alone never reaches the agent's knowledge base.
+      if (selectedPage.status === 'verified') {
+        syncPageToWikiKB(selectedPage.title, editBody, selectedPage.slug)
+      }
       await load()
       onChanged()
     } catch (err: any) {
@@ -233,6 +240,21 @@ export default function WikiSection({
       const data = await res.json()
       if (data.success) setVersions(Array.isArray(data.data) ? data.data : [])
     } catch { /* ignore */ }
+  }
+
+  // Manual re-index for pages created/edited before KB sync was wired in, or
+  // if a train call silently failed — lets an owner/admin force it without
+  // needing to make a no-op edit just to trigger the save-path sync.
+  async function syncToAsk() {
+    if (!selectedPage || selectedPage.id.startsWith('sample-')) { toast.error('Turn off Sample Data to sync a real page'); return }
+    setSyncingKb(true)
+    try {
+      const ok = await syncPageToWikiKB(selectedPage.title, selectedPage.body_md, selectedPage.slug)
+      if (ok) toast.success('Pushed to the Verified Wiki KB — Ask can now retrieve this page')
+      else toast.error('Failed to sync to the knowledge base')
+    } finally {
+      setSyncingKb(false)
+    }
   }
 
   async function runImport() {
@@ -287,6 +309,10 @@ export default function WikiSection({
       const data = await res.json()
       if (!data.success) { toast.error(data.error ?? 'Failed to import page'); return }
       toast.success('Page imported and indexed')
+      // New pages default to status "verified" (see /api/pages POST) — push the
+      // full body into the Verified Wiki KB immediately so Ask can find it.
+      const bodyMd = mapperSections.map((s) => `## ${s.heading}\n\n${s.body_md}`).join('\n\n')
+      syncPageToWikiKB(importTitle, bodyMd, importTitle)
       setImportOpen(false)
       setImportText('')
       setMapperSections(null)
@@ -459,6 +485,11 @@ export default function WikiSection({
                       </SelectContent>
                     </Select>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={openHistory}><History className="h-3 w-3 mr-1" /> History</Button>
+                    {selectedPage.status === 'verified' && canEditPage(selectedPage) && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={syncToAsk} disabled={syncingKb || selectedPage.id.startsWith('sample-')}>
+                        {syncingKb ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <DatabaseZap className="h-3 w-3 mr-1" />} Sync to Ask
+                      </Button>
+                    )}
                   </div>
                 </div>
 
