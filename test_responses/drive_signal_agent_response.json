@@ -1,0 +1,14 @@
+{
+  "agent_id": "6a7a2254fd0aefe8da8c6921",
+  "agent_name": "Drive Signal Agent",
+  "response": {
+    "result": {
+      "module_outputs": {},
+      "response": "To scan the \"AcmePay Docs\" folder for decision-bearing facts, I need access to your Google Drive account. Please connect your Google Drive account via the appropriate connection interface, then I can proceed with the scan."
+    },
+    "status": "success"
+  },
+  "status": "passed",
+  "test_input": "Scan these scoped folders for decision-bearing facts: [\"AcmePay Docs\"].",
+  "timestamp": "2026-08-11T07:02:56.796152"
+}

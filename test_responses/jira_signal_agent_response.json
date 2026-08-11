@@ -1,0 +1,14 @@
+{
+  "agent_id": "6a7a2254cb71768e58329006",
+  "agent_name": "Jira Signal Agent",
+  "response": {
+    "result": {
+      "module_outputs": {},
+      "response": "To extract decision-bearing facts, I need the specific issue keys (or a JQL query) for the KAN project. Please provide a list of recent issue keys or a JQL query to retrieve them."
+    },
+    "status": "success"
+  },
+  "status": "passed",
+  "test_input": "Scan these scoped projects for decision-bearing facts: [\"KAN\"].",
+  "timestamp": "2026-08-11T07:02:55.474503"
+}

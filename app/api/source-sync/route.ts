@@ -52,11 +52,13 @@ export const POST = authMiddleware(async (req: any) => {
     const src = srcRows[0];
     if (!src) return NextResponse.json({ success: false, error: "Source not found" }, { status: 404 });
 
-    console.log(`[source-sync] start source_kind=${src.kind} source_id=${sourceId} scopes=${JSON.stringify(src.scopes)}`);
+    console.log(`[source-sync] sync_started source_kind=${src.kind} source_id=${sourceId}`);
+    console.log(`[source-sync] provider_selected provider=${src.kind}`);
+    console.log(`[source-sync] scope_selected source_kind=${src.kind} scopes=${JSON.stringify(src.scopes)}`);
 
     if (body.sync_status === "error") {
       const errMsg = String(body.error_message ?? "Unknown sync error").slice(0, 300);
-      console.error(`[source-sync] failure source_kind=${src.kind} source_id=${sourceId} error=${errMsg}`);
+      console.error(`[source-sync] sync_failed source_kind=${src.kind} source_id=${sourceId} error=${errMsg}`);
       await upsertCursor(db, sourceId, "default", `error: ${errMsg}`);
       await db.insert(audit_log).values({
         actor_user_id: req.userId,
@@ -69,7 +71,8 @@ export const POST = authMiddleware(async (req: any) => {
     }
 
     const rawFacts: any[] = Array.isArray(body.facts) ? body.facts : [];
-    console.log(`[source-sync] provider_response source_kind=${src.kind} fact_count=${rawFacts.length}`);
+    console.log(`[source-sync] provider_request_started source_kind=${src.kind}`);
+    console.log(`[source-sync] provider_response_status source_kind=${src.kind} result_count=${rawFacts.length}`);
 
     const normalized = rawFacts
       .filter((f) => f && f.event_id && f.text)
@@ -106,7 +109,7 @@ export const POST = authMiddleware(async (req: any) => {
       }
     }
     console.log(
-      `[source-sync] persisted source_kind=${src.kind} new=${persisted} duplicates=${normalized.length - persisted}`
+      `[source-sync] sync_completed source_kind=${src.kind} new=${persisted} duplicates=${normalized.length - persisted}`
     );
 
     await db.update(sources).set({ last_synced_at: new Date() }).where(eq(sources.id, sourceId));

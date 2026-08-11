@@ -1,0 +1,11 @@
+{
+  "agent_id": "6a7a22546ada253b4e709d3d",
+  "agent_name": "Linear Signal Agent",
+  "response": {
+    "error": "API returned status 401",
+    "rawResponse": "{\"detail\":{\"message\":\"Tool authentication required.\",\"code\":401,\"internal_code\":4011,\"type\":\"tool_auth\",\"provider_uuid\":\"6996b54ec2559ad95ebaa8ba\",\"tool_id\":\"linear-architect-wiki-sync-modern-beam-37q6\",\"tool_name\":\"linear-architect-wiki-sync-modern-beam-37q6\",\"action_names\":[\"LINEAR_LIST_LINEAR_ISSUES\",\"LINEAR_GET_ISSUE_BY_ID\"],\"tool_source\":\"composio\",\"reason\":\"No credentials found. Connect an account.\",\"auth_type\":\"oauth2\"}}"
+  },
+  "status": "failed",
+  "test_input": "Scan these scoped teams for decision-bearing facts: [\"Maniranjan1512\"].",
+  "timestamp": "2026-08-11T07:01:58.094341"
+}

@@ -1,0 +1,14 @@
+{
+  "agent_id": "6a7a22545a2d7a3a966e1d43",
+  "agent_name": "GitHub Signal Agent",
+  "response": {
+    "result": {
+      "module_outputs": {},
+      "response": "{\"facts\":[],\"status\":\"error\",\"metadata\":{\"agent_name\":\"GitHub Signal Agent\",\"timestamp\":\"2026-08-11T12:00:00Z\"}}"
+    },
+    "status": "success"
+  },
+  "status": "passed",
+  "test_input": "Scan these scoped repos for decision-bearing facts: [\"maniranjan2023/acmepay-test\"].",
+  "timestamp": "2026-08-11T07:05:14.420608"
+}

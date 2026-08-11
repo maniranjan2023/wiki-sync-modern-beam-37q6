@@ -221,7 +221,7 @@ export default function SourcesSection({
     if (role === 'viewer') return
     setScanning(true)
     setActiveAgentId(DRIFT_SCAN_COORDINATOR_ID)
-    const progress = { synced: 0, sourcesFailed: [] as string[] }
+    const progress = { synced: 0, sourcesFailed: [] as string[], perSource: {} as Record<string, number> }
     try {
       // STAGE 0 — load wiki sections to compare against.
       const sectionsRes = await authFetch('/api/pages')
@@ -269,10 +269,10 @@ export default function SourcesSection({
             })
             continue
           }
-          let parsed: { facts?: SignalFact[] } | null = null
+          let parsed: { facts?: SignalFact[]; status?: string; message?: string } | null = null
           try {
             const raw = result.response.result as any
-            parsed = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : (raw as { facts?: SignalFact[] })
+            parsed = typeof raw === 'string' ? JSON.parse(stripFences(raw)) : (raw as { facts?: SignalFact[]; status?: string; message?: string })
           } catch {
             progress.sourcesFailed.push(src.kind)
             await authFetch('/api/source-sync', {
@@ -282,7 +282,23 @@ export default function SourcesSection({
             })
             continue
           }
-          const facts = Array.isArray(parsed?.facts) ? parsed!.facts! : []
+          // The Signal Agent's OWN contract carries its own status field
+          // (distinct from the outer envelope) and, when its tool has no
+          // credentials connected, may reply in prose asking to connect the
+          // account instead of the strict {facts:[]} shape. Both must be
+          // treated as a real sync failure, not a silent zero-fact success.
+          const hasFactsKey = parsed !== null && Array.isArray(parsed.facts)
+          if (!parsed || parsed.status === 'error' || !hasFactsKey) {
+            progress.sourcesFailed.push(src.kind)
+            const reason = (parsed && (parsed as any).message) || (parsed && !hasFactsKey ? (result.response.result as any)?.response : null) || 'Tool not connected or returned an unexpected response'
+            await authFetch('/api/source-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ source_id: src.id, sync_status: 'error', error_message: String(reason).slice(0, 300) }),
+            })
+            continue
+          }
+          const facts = parsed.facts as SignalFact[]
           factsBySource[src.id] = facts
           const syncRes = await authFetch('/api/source-sync', {
             method: 'POST',
@@ -290,7 +306,10 @@ export default function SourcesSection({
             body: JSON.stringify({ source_id: src.id, facts }),
           })
           const syncData = await syncRes.json()
-          if (syncData.success) progress.synced += syncData.data.persisted ?? 0
+          if (syncData.success) {
+            progress.synced += syncData.data.persisted ?? 0
+            progress.perSource[src.kind] = syncData.data.persisted ?? 0
+          }
         } catch (err: any) {
           progress.sourcesFailed.push(src.kind)
           await authFetch('/api/source-sync', {
@@ -300,16 +319,25 @@ export default function SourcesSection({
           })
         }
       }
-      await load() // refresh events_ingested counts now that sync has persisted rows
+      await load() // refresh events_ingested + sync status now that sync has persisted rows
+
+      const perSourceLines = [
+        ...Object.entries(progress.perSource).map(([kind, n]) => `${kind}: ${n} fact${n === 1 ? '' : 's'} ingested`),
+        ...progress.sourcesFailed.map((kind) => `${kind}: sync failed`),
+      ]
+      const summaryLine = perSourceLines.length > 0 ? ` (${perSourceLines.join(', ')})` : ''
 
       const allFacts = Object.values(factsBySource).flat()
       if (allFacts.length === 0) {
         toast.error(
           progress.sourcesFailed.length > 0
-            ? `No facts ingested — sync failed for: ${progress.sourcesFailed.join(', ')}. Check Sources for error status.`
+            ? `No facts ingested — sync failed for: ${progress.sourcesFailed.join(', ')}.${summaryLine ? ` See error detail on each Sources card.` : ''}`
             : 'No decision-bearing facts found in the configured scopes yet.'
         )
         return
+      }
+      if (progress.sourcesFailed.length > 0) {
+        toast.error(`Continuing with successful sources — sync failed for: ${progress.sourcesFailed.join(', ')}.${summaryLine}`)
       }
 
       // STAGE 3 — detect drift once per (section, source) pair using the
@@ -426,7 +454,7 @@ export default function SourcesSection({
       if (!persistData.success) { toast.error(persistData.error ?? 'Failed to persist scan results'); return }
 
       setLastScanSummary({ proposals: persistData.data.created_proposals, conflicts: conflicts.length })
-      toast.success(`Drift scan complete — ${progress.synced} event(s) ingested, ${persistData.data.created_proposals} proposal(s) queued for review${conflicts.length > 0 ? `, ${conflicts.length} conflict(s) need arbitration` : ''}`)
+      toast.success(`Drift scan complete — ${progress.synced} event(s) ingested, ${persistData.data.created_proposals} proposal(s) queued for review${conflicts.length > 0 ? `, ${conflicts.length} conflict(s) need arbitration` : ''}.${summaryLine}`)
       onChanged()
     } catch (err: any) {
       toast.error(err.message ?? 'Drift scan failed — you can retry without losing prior proposals')
@@ -506,8 +534,13 @@ export default function SourcesSection({
             const existing = displaySources.find((s) => s.kind === def.kind)
             const Icon = def.icon
             const isConnected = existing?.status === 'connected'
+            const latestCursor = existing?.cursors && existing.cursors.length > 0
+              ? existing.cursors.reduce((a, b) => (new Date(a.last_run_at ?? 0) > new Date(b.last_run_at ?? 0) ? a : b))
+              : null
+            const syncFailed = !!latestCursor?.last_status?.startsWith('error')
+            const syncOk = latestCursor?.last_status === 'success'
             return (
-              <Card key={def.kind} className="flex flex-col">
+              <Card key={def.kind} className={`flex flex-col ${syncFailed ? 'border-destructive/40' : ''}`}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -520,6 +553,17 @@ export default function SourcesSection({
                   <CardDescription className="text-xs">
                     {existing?.last_synced_at ? `Last synced ${new Date(existing.last_synced_at).toLocaleString()}` : 'Never synced'}
                   </CardDescription>
+                  {isConnected && (
+                    <div className={`flex items-center gap-1.5 text-[11px] font-medium mt-1 ${syncFailed ? 'text-destructive' : syncOk ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                      {syncFailed ? <AlertTriangle className="h-3 w-3" /> : syncOk ? <CheckCircle2 className="h-3 w-3" /> : null}
+                      {syncFailed ? 'Sync failed' : syncOk ? 'Synced' : 'Not yet synced'}
+                    </div>
+                  )}
+                  {syncFailed && (
+                    <p className="text-[10px] text-destructive/90 mt-0.5 break-words">
+                      Error: {latestCursor!.last_status!.replace(/^error:\s*/, '')}
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col gap-3 text-xs">
                   <div className="flex flex-wrap gap-1">
