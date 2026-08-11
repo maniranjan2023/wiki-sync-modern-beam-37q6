@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  FileText, Upload, History, CheckCircle2, AlertTriangle, Clock, Loader2, Save, Radio, User,
+  FileText, Upload, History, CheckCircle2, AlertTriangle, Clock, Loader2, Save, Radio, User, ChevronDown, RefreshCw,
 } from 'lucide-react'
 import { callAIAgent } from '@/lib/aiAgent'
 import type { Role } from '@/app/page'
@@ -42,6 +43,15 @@ interface VersionRow { id: string; page_id: string; body_md: string; version_no:
 
 interface MapperSection { heading: string; body_md: string; position: number; suggested_owner: string; suggested_scopes: string[] }
 interface MapperResult { sections: MapperSection[]; status: 'success' | 'error'; metadata?: { agent_name?: string; timestamp?: string } }
+interface MemberRow { id: string; owner_user_id: string; email: string; role: Role; invited?: boolean }
+
+function displayNameFromEmail(email: string): string {
+  if (!email) return 'Unknown user'
+  const local = email.split('@')[0] || email
+  const words = local.replace(/[._-]+/g, ' ').split(' ').filter(Boolean)
+  if (words.length === 0) return email
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 const SAMPLE_PAGES: PageRow[] = [
   { id: 'sample-1', title: 'Pricing & Packaging', slug: 'pricing-packaging', body_md: '## Enterprise tier\n\nBilled annually at $2,000 per month, minimum 25 seats.', status: 'drift_detected', owner_user_id: 'sample-owner', cadence: 'weekly', last_verified_at: new Date(Date.now() - 12 * 86400000).toISOString(), open_finding_count: 1 },
@@ -100,7 +110,38 @@ export default function WikiSection({
   const [importTitle, setImportTitle] = useState('')
   const [importOwner, setImportOwner] = useState('')
 
+  const [members, setMembers] = useState<MemberRow[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [membersError, setMembersError] = useState<string | null>(null)
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false)
+  const [ownerSaving, setOwnerSaving] = useState(false)
+
   const isViewer = role === 'viewer'
+  const isAdmin = role === 'admin'
+
+  const loadMembers = useCallback(async () => {
+    if (!isAdmin) return
+    setMembersLoading(true)
+    setMembersError(null)
+    try {
+      const res = await authFetch('/api/members')
+      const data = await res.json()
+      if (data.success) setMembers(Array.isArray(data.data) ? data.data : [])
+      else setMembersError(data.error ?? 'Failed to load users')
+    } catch (err: any) {
+      setMembersError(err.message ?? 'Network error loading users')
+    } finally {
+      setMembersLoading(false)
+    }
+  }, [authFetch, isAdmin])
+
+  useEffect(() => { if (isAdmin) loadMembers() }, [isAdmin, loadMembers])
+
+  const assignableMembers = useMemo(() => members.filter((m) => !m.invited), [members])
+  const ownerLabel = useCallback((ownerUserId: string) => {
+    const m = members.find((mm) => mm.owner_user_id === ownerUserId)
+    return m ? displayNameFromEmail(m.email) : 'Owner assigned'
+  }, [members])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -259,6 +300,29 @@ export default function WikiSection({
     }
   }
 
+  async function assignOwner(newOwnerId: string | null) {
+    if (!selectedPage) return
+    if (selectedPage.id.startsWith('sample-')) { toast.error('Turn off Sample Data to assign an owner'); return }
+    setOwnerSaving(true)
+    try {
+      const res = await authFetch('/api/pages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedPage.id, owner_user_id: newOwnerId }),
+      })
+      const data = await res.json()
+      if (!data.success) { toast.error(data.error ?? 'Failed to save owner'); return }
+      setPages((prev) => prev.map((p) => (p.id === selectedPage.id ? { ...p, owner_user_id: data.data.owner_user_id } : p)))
+      toast.success(newOwnerId ? `Owner set to ${ownerLabel(newOwnerId)}` : 'Owner unassigned')
+      setOwnerPopoverOpen(false)
+      onChanged()
+    } catch (err: any) {
+      toast.error(err.message ?? 'Network error saving owner')
+    } finally {
+      setOwnerSaving(false)
+    }
+  }
+
   const canImport = role !== 'viewer'
 
   return (
@@ -324,7 +388,68 @@ export default function WikiSection({
                     <StatusPill status={selectedPage.status} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] gap-1"><User className="h-3 w-3" />{selectedPage.owner_user_id ? 'Owned' : 'Unassigned (admin)'}</Badge>
+                    {isAdmin ? (
+                      <Popover open={ownerPopoverOpen} onOpenChange={(o) => { setOwnerPopoverOpen(o); if (o) loadMembers() }}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] gap-1 px-2"
+                            disabled={selectedPage.id.startsWith('sample-')}
+                          >
+                            <User className="h-3 w-3" />
+                            {selectedPage.owner_user_id ? `Owner: ${ownerLabel(selectedPage.owner_user_id)}` : 'Unassigned (admin)'}
+                            <ChevronDown className="h-3 w-3 opacity-60" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-0" align="end">
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Assign owner</span>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={loadMembers} disabled={membersLoading}>
+                              <RefreshCw className={`h-3 w-3 ${membersLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto py-1">
+                            {membersLoading ? (
+                              <div className="px-3 py-4 text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading users…</div>
+                            ) : membersError ? (
+                              <div className="px-3 py-4 text-xs text-destructive">{membersError}</div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => assignOwner(null)}
+                                  disabled={ownerSaving}
+                                  className={`w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center justify-between ${!selectedPage.owner_user_id ? 'bg-muted/60' : ''}`}
+                                >
+                                  <span className="text-muted-foreground">Unassigned</span>
+                                  {!selectedPage.owner_user_id && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                                </button>
+                                {assignableMembers.length === 0 ? (
+                                  <div className="px-3 py-4 text-xs text-muted-foreground">No workspace users found.</div>
+                                ) : (
+                                  assignableMembers.map((m) => (
+                                    <button
+                                      key={m.owner_user_id}
+                                      onClick={() => assignOwner(m.owner_user_id)}
+                                      disabled={ownerSaving}
+                                      className={`w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center justify-between gap-2 ${selectedPage.owner_user_id === m.owner_user_id ? 'bg-muted/60' : ''}`}
+                                    >
+                                      <span className="min-w-0">
+                                        <span className="block font-medium truncate">{displayNameFromEmail(m.email)}</span>
+                                        <span className="block text-[10px] text-muted-foreground truncate">{m.email} · {m.role}</span>
+                                      </span>
+                                      {selectedPage.owner_user_id === m.owner_user_id && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
+                                    </button>
+                                  ))
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] gap-1"><User className="h-3 w-3" />{selectedPage.owner_user_id ? `Owner: ${ownerLabel(selectedPage.owner_user_id)}` : 'Unassigned'}</Badge>
+                    )}
                     <Select value={cadence} onValueChange={saveCadence} disabled={!canEditPage(selectedPage)}>
                       <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -449,8 +574,19 @@ export default function WikiSection({
               </div>
               {role === 'admin' && (
                 <div>
-                  <Label className="text-xs">Owner (user id, optional — leave blank to assign later)</Label>
-                  <Input value={importOwner} onChange={(e) => setImportOwner(e.target.value)} className="h-8 text-sm mt-1" placeholder="owner_user_id" />
+                  <Label className="text-xs">Owner (optional — leave unassigned to assign later)</Label>
+                  <Select value={importOwner || '__unassigned__'} onValueChange={(v) => setImportOwner(v === '__unassigned__' ? '' : v)}>
+                    <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                      {assignableMembers.map((m) => (
+                        <SelectItem key={m.owner_user_id} value={m.owner_user_id}>
+                          {displayNameFromEmail(m.email)} · {m.email} · {m.role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {membersError && <p className="text-[11px] text-destructive mt-1">{membersError}</p>}
                 </div>
               )}
               <div className="space-y-2 max-h-64 overflow-y-auto">
