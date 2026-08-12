@@ -81,12 +81,17 @@ export async function POST(request: NextRequest) {
 
       if (response.ok) {
         const data = await response.json();
-        // Response is array of file paths like ["storage/voicestream-dev-guide.pdf"]
-        const filePaths = Array.isArray(data)
+        // The RAG API has returned documents in two shapes seen in practice:
+        // plain path strings ("storage/file.pdf") and object entries
+        // ({ type, name, source_key, ... }) — normalize both defensively so a
+        // shape change never crashes this route (previously threw
+        // "filePath.split is not a function" and surfaced as an opaque 500).
+        const rawEntries = Array.isArray(data)
           ? data
           : data.documents || data.data || [];
 
-        const documents = filePaths.map((filePath: string) => {
+        const documents = rawEntries.map((entry: any) => {
+          const filePath: string = typeof entry === 'string' ? entry : (entry?.name ?? entry?.filePath ?? entry?.file_path ?? String(entry));
           const fileName = filePath.split("/").pop() || filePath;
           const ext = fileName.split(".").pop()?.toLowerCase() || "";
           const fileType =
