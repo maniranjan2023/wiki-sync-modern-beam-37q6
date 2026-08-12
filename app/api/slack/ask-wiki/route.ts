@@ -17,7 +17,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { verifySlackSignature } from '@/lib/slackVerify'
 import { callAIAgentServer } from '@/lib/aiAgentServer'
 import { parseAnswer, VERIFIED_ANSWER_AGENT_ID } from '@/lib/wikiAnswerParser'
-import { formatAnswerForSlack } from '@/lib/slackFormat'
+import { formatAnswerForSlack, withQuestionHeader } from '@/lib/slackFormat'
 
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || ''
 
@@ -161,7 +161,7 @@ async function processAskWiki(params: {
     await fetch(response_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ response_type: 'ephemeral', replace_original: true, text: finalText }),
+      body: JSON.stringify({ response_type: 'ephemeral', replace_original: true, text: withQuestionHeader(text, finalText) }),
     })
   } catch {
     // response_url delivery failure — already logged the underlying outcome

@@ -11,6 +11,23 @@ function mdInlineToSlack(text: string): string {
     .replace(/\[([^\]]*)\]\(([^)]*)\)/g, '<$2|$1>') // [text](url) -> <url|text>
 }
 
+// Slack mrkdwn treats &, <, > as special characters that must be escaped in
+// any raw (non-mrkdwn) text — the user's original question is plain text we
+// display verbatim, not markdown we generate, so it needs this escaping
+// rather than mdInlineToSlack's bold/link conversion.
+// https://api.slack.com/reference/surfaces/formatting#escaping
+function escapeSlackText(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Prepends a *Question* section showing the user's exact original text
+// ahead of any final Slack message body (a successful answer OR an error/
+// fallback message) so every response makes clear what was actually asked.
+export function withQuestionHeader(question: string, bodyText: string): string {
+  if (!question) return bodyText
+  return `*Question*\n${escapeSlackText(question)}\n\n${bodyText}`
+}
+
 export function formatAnswerForSlack(parsed: ParsedAnswer): string {
   const lines: string[] = ['*Answer*', mdInlineToSlack(parsed.answer)]
 
